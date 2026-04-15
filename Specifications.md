@@ -227,23 +227,25 @@ Registre des instances en attente d’un signal nommé.
 
 ### 5.1 Nœud Métier (`NoeudMetier`)
 
-**Rôle :** Exécute une commande métier via un `IHandlerCommande` résolu dynamiquement par `NomCommande`.
+**Rôle :** Exécute une commande métier via un `IBpmHandlerCommande` résolu dynamiquement par `NomCommande`.
 
 **Cycle de vie :**
 
 1. Le moteur résout le handler correspondant à `NomCommande` depuis le conteneur Autofac.
-1. Il résout `SourceAggregateId` et chaque paramètre depuis les variables du processus ou des valeurs statiques définies dans le nœud.
-1. Il appelle `HandleAsync(aggregateId, parametres, contexte)`.
+1. Il résout chaque paramètre depuis les variables du processus ou des valeurs statiques définies dans le nœud.
+1. Il appelle `ExecuterAsync(contexte.AggregateId, parametres, contexte)`.
 1. En cas de succès, il passe au nœud suivant dans la même transaction.
 1. En cas d’exception, rollback complet + rethrow.
 
 **Propriétés de définition :**
 
 ```
-NomCommande         : string                        // Nom du handler à invoquer
-SourceAggregateId   : ISourceParametre?             // Résolution de l'ID d'agrégat
+NomCommande         : string                                 // Nom du handler à invoquer
+                                                             // Défaut : PascalCase(id) + "Command"
 Parametres          : Dictionary<string, ISourceParametre>  // Paramètres additionnels
 ```
+
+**L’aggregate id** est toujours `IContexteExecution.AggregateId` — il n’est pas défini dans le nœud.
 
 **Résolution de paramètres (`ISourceParametre`) :**
 
@@ -296,7 +298,7 @@ CommandePost        : DefinitionCommande?           // Commande optionnelle à l
 
 - `ConditionVariable(nomVariable, operateur, valeur)` → évalue une variable du processus  
   Opérateurs : `Egal`, `Different`, `Superieur`, `Inferieur`, `SuperieurOuEgal`, `InferieurOuEgal`, `Contient`
-- `ConditionQuery(nomQuery, sourceAggregateId, parametres)` → appelle un `IHandlerQuery<bool>` résolu par `NomQuery`
+- `ConditionQuery(nomQuery, parametres)` → appelle un `IBpmHandlerQuery<bool>` résolu par `NomQuery` ; l'aggregate id vient de `contexte.AggregateId`
 
 **Propriétés de définition :**
 
@@ -314,7 +316,7 @@ EstParDefaut        : bool
 
 **Cycle de vie — Arrivée :**
 
-1. La date d’échéance est résolue depuis une `SourceParametre` (variable du processus ou appel à un `IHandlerQuery<DateTime>`).
+1. La date d’échéance est résolue depuis une `ISourceParametre` (variable du processus ou appel à un `IBpmHandlerQuery<DateTime>`) ; l’aggregate id vient de `contexte.AggregateId`.
 1. La date est stockée dans le détail de l’événement `NoeudSuspendu`.
 1. L’instance passe au statut `Suspendue`.
 
@@ -389,49 +391,31 @@ VariablesSorties    : List<string>                  // Noms des variables à rem
 ### 6.1 Approche Fluent (C#)
 
 ```csharp
-var definition = new DefinitionProcessusBuilder("approbation-commande")
-    .Nommer("Processus d'approbation de commande")
-    .Debuter("debut")
-    
-    // Nœud métier
-    .AjouterNoeudMetier("valider-commande", n => n
-        .Nommer("Valider la commande")
-        .CommandeNommee("ValiderCommande")
-        .AggregateIdDepuisVariable("commandeId")
-        .Vers("approbation-responsable"))
-    
+// Clé + nom + nœud de début en une seule instruction
+var definition = new DefinitionProcessusBuilder(
+        "approbation-commande",
+        "Processus d'approbation de commande",
+        "valider-commande")
+
+    // Ultra-compact : id → "ValiderCommandeCommand", aggregate depuis l'instance
+    .AjouterNoeudMetier("valider-commande", "Valider la commande", vers: "approbation-responsable")
+
     // Nœud interactif
-    .AjouterNoeudInteractif("approbation-responsable", n => n
-        .Nommer("Approbation responsable")
-        .DefinirTache(t => t
-            .Titre("Approuver la commande")
-            .Description("Veuillez approuver ou refuser la commande"))
-        .AvecCommandePre("MarquerEnAttenteApprobation", 
-            p => p.AggregateIdDepuisVariable("commandeId"))
-        .AvecCommandePost("MarquerApprouvee", 
-            p => p.AggregateIdDepuisVariable("commandeId"))
+    .AjouterNoeudInteractif("approbation-responsable", "Approbation responsable", n => n
+        .DefinirTache("Approuver la commande", "Veuillez approuver ou refuser la commande")
+        .AvecCommandePre("MarquerEnAttenteApprobation")
+        .AvecCommandePost("MarquerApprouvee")
         .Vers("decision-approbation"))
-    
+
     // Nœud décision
-    .AjouterNoeudDecision("decision-approbation", n => n
-        .Nommer("Décision d'approbation")
-        .SiVariable("statutApprobation", Operateur.Egal, "Approuvee").Vers("notification-approbation")
-        .SiVariable("statutApprobation", Operateur.Egal, "Refusee").Vers("notification-refus")
+    .AjouterNoeudDecision("decision-approbation", "Décision d'approbation", n => n
+        .SiEgal("statutApprobation", "Approuvee").Vers("notification-approbation")
         .ParDefaut().Vers("notification-refus"))
-    
-    // Fins
-    .AjouterNoeudMetier("notification-approbation", n => n
-        .Nommer("Notifier approbation")
-        .CommandeNommee("NotifierApprobation")
-        .AggregateIdDepuisVariable("commandeId")
-        .EstFinale())
-    
-    .AjouterNoeudMetier("notification-refus", n => n
-        .Nommer("Notifier refus")
-        .CommandeNommee("NotifierRefus")
-        .AggregateIdDepuisVariable("commandeId")
-        .EstFinale())
-    
+
+    // Fins — ultra-compact (finale implicite)
+    .AjouterNoeudMetier("notification-approbation", "Notifier approbation")
+    .AjouterNoeudMetier("notification-refus", "Notifier refus")
+
     .Construire();
 ```
 
@@ -449,8 +433,7 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
       "id": "valider-commande",
       "type": "NoeudMetier",
       "nom": "Valider la commande",
-      "nomCommande": "ValiderCommande",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "ValiderCommandeCommand",
       "fluxSortants": [{ "vers": "approbation-responsable" }]
     },
     {
@@ -462,12 +445,10 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
         "description": "Veuillez approuver ou refuser la commande"
       },
       "commandePre": {
-        "nomCommande": "MarquerEnAttenteApprobation",
-        "sourceAggregateId": { "type": "Variable", "nom": "commandeId" }
+        "nomCommande": "MarquerEnAttenteApprobation"
       },
       "commandePost": {
-        "nomCommande": "MarquerApprouvee",
-        "sourceAggregateId": { "type": "Variable", "nom": "commandeId" }
+        "nomCommande": "MarquerApprouvee"
       },
       "fluxSortants": [{ "vers": "decision-approbation" }]
     },
@@ -495,16 +476,14 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
       "id": "notification-approbation",
       "type": "NoeudMetier",
       "nom": "Notifier approbation",
-      "nomCommande": "NotifierApprobation",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "NotificationApprobationCommand",
       "estFinale": true
     },
     {
       "id": "notification-refus",
       "type": "NoeudMetier",
       "nom": "Notifier refus",
-      "nomCommande": "NotifierRefus",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "NotificationRefusCommand",
       "estFinale": true
     }
   ]
@@ -517,7 +496,9 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
 
 Ces interfaces sont définies dans `BpmPlus.Abstractions` et doivent être implémentées par l’application cliente.
 
-### 7.1 `IHandlerCommande`
+### 7.1 `IBpmHandlerCommande`
+
+> Le préfixe `Bpm` évite les conflits avec les interfaces `IHandlerCommande` ou `ICommandHandler` que l'application cliente peut déjà exposer pour ses propres besoins CQRS.
 
 ```csharp
 namespace BpmPlus.Abstractions;
@@ -525,8 +506,9 @@ namespace BpmPlus.Abstractions;
 /// <summary>
 /// Commande métier exécutable par le moteur BPM lors du traitement d'un NoeudMetier.
 /// Chaque implémentation est découverte automatiquement par son NomCommande.
+/// Convention : NomCommande = PascalCase(id du nœud) + "Command".
 /// </summary>
-public interface IHandlerCommande
+public interface IBpmHandlerCommande
 {
     /// <summary>
     /// Identifiant unique de la commande. Doit correspondre au NomCommande
@@ -535,7 +517,8 @@ public interface IHandlerCommande
     string NomCommande { get; }
 
     /// <param name="aggregateId">
-    /// ID de l'agrégat métier ciblé. Null si la commande n'est pas liée à un agrégat.
+    /// ID de l'agrégat métier de l'instance — fourni automatiquement par le moteur
+    /// depuis IContexteExecution.AggregateId.
     /// </param>
     /// <param name="parametres">
     /// Paramètres résolus par le moteur depuis les variables du processus
@@ -554,7 +537,9 @@ public interface IHandlerCommande
 
 -----
 
-### 7.2 `IHandlerQuery<TResultat>`
+### 7.2 `IBpmHandlerQuery<TResultat>`
+
+> Le préfixe `Bpm` évite les conflits avec les interfaces `IHandlerQuery` que l'application cliente peut déjà exposer.
 
 ```csharp
 namespace BpmPlus.Abstractions;
@@ -562,8 +547,9 @@ namespace BpmPlus.Abstractions;
 /// <summary>
 /// Query exécutable par le moteur BPM pour prendre une décision (NoeudDecision)
 /// ou résoudre une date d'échéance (NoeudAttenteTemps).
+/// L'aggregate id est fourni automatiquement depuis IContexteExecution.AggregateId.
 /// </summary>
-public interface IHandlerQuery<TResultat>
+public interface IBpmHandlerQuery<TResultat> : IBpmHandlerQuery
 {
     /// <summary>
     /// Identifiant unique de la query. Doit correspondre au NomQuery
@@ -866,7 +852,7 @@ public interface IServiceMigration
 - Le moteur **ne crée jamais** de connexion ni de transaction.
 - Chaque méthode de `IServiceFlux` et `IServiceMigration` reçoit un `IDbTransaction` actif.
 - Toutes les opérations du moteur (exécution des nœuds, persistance des variables, écriture de l’historique) utilisent cette transaction.
-- Les handlers de l’application cliente (`IHandlerCommande`, `IHandlerQuery`) reçoivent la même transaction via `IContexteExecution.Transaction`.
+- Les handlers de l’application cliente (`IBpmHandlerCommande`, `IBpmHandlerQuery`) reçoivent la même transaction via `IContexteExecution.Transaction`.
 - **L’appelant est responsable du commit ou du rollback.** Le moteur ne committe jamais.
 - En cas d’exception dans un handler, le moteur la rethrow sans la capturer — c’est à l’appelant de rollbacker.
 
@@ -874,8 +860,8 @@ public interface IServiceMigration
 
 |Situation                                                       |Comportement                                        |
 |----------------------------------------------------------------|----------------------------------------------------|
-|Exception dans `IHandlerCommande`                               |Rethrow immédiat, rollback à la charge de l’appelant|
-|Exception dans `IHandlerQuery`                                  |Rethrow immédiat, rollback à la charge de l’appelant|
+|Exception dans `IBpmHandlerCommande`                            |Rethrow immédiat, rollback à la charge de l’appelant|
+|Exception dans `IBpmHandlerQuery`                               |Rethrow immédiat, rollback à la charge de l’appelant|
 |Nœud courant introuvable dans la définition                     |`NoeudIntrouvableException`                         |
 |Aucune condition vraie sans branche par défaut                  |`AucuneChemin Exception`                            |
 |Instance non suspendue lors d’un `TerminerEtapeAsync`           |`EtatInstanceInvalideException`                     |
@@ -910,7 +896,7 @@ var builder = new ContainerBuilder();
 
 builder.RegisterModule(new BpmModule(config =>
 {
-    // Découverte automatique de tous les IHandlerCommande et IHandlerQuery<> de l'assembly
+    // Découverte automatique de tous les IBpmHandlerCommande et IBpmHandlerQuery<> de l'assembly
     config.ScanHandlers(Assembly.GetExecutingAssembly());
 
     // Gestionnaire de tâches humaines (optionnel)
@@ -928,8 +914,8 @@ builder.RegisterModule(new BpmModule(config =>
 
 - `IServiceFlux` → `ServiceFlux` (scoped)
 - `IServiceMigration` → `ServiceMigration` (scoped)
-- `IHandlerCommande` → tous les handlers découverts (keyed par `NomCommande`)
-- `IHandlerQuery<>` → tous les handlers découverts (keyed par `NomQuery`)
+- `IBpmHandlerCommande` → tous les handlers découverts (keyed par `NomCommande`)
+- `IBpmHandlerQuery<>` → tous les handlers découverts (keyed par `NomQuery`)
 - `IGestionTache` → implémentation fournie par l’app cliente (si configurée)
 - Repositories Oracle ou SQLite selon la configuration
 - `ILogger<T>` → délégué au conteneur parent (l’app cliente fournit le logging)

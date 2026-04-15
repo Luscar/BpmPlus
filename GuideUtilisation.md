@@ -74,7 +74,7 @@ var builder = new ContainerBuilder();
 
 builder.RegisterModule(new BpmModule(config =>
 {
-    // Découverte automatique de tous les IHandlerCommande et IHandlerQuery<>
+    // Découverte automatique de tous les IBpmHandlerCommande et IBpmHandlerQuery<>
     config.ScanHandlers(Assembly.GetExecutingAssembly());
 
     // Gestionnaire de tâches humaines (requis si vous utilisez des nœuds interactifs)
@@ -99,21 +99,23 @@ Le module enregistre automatiquement :
 
 ## 4. Implémenter les handlers
 
-### 4.1 Handler de commande (`IHandlerCommande`)
+### 4.1 Handler de commande (`IBpmHandlerCommande`)
 
 Utilisé par les nœuds métier et les commandes PRE/POST des nœuds interactifs.
 
 ```csharp
-public class ValiderCommandeHandler : IHandlerCommande
+public class ValiderCommandeCommand : IBpmHandlerCommande
 {
-    public string NomCommande => "ValiderCommande";
+    // Convention : NomCommande = PascalCase(id du nœud) + "Command"
+    // Le nœud "valider-commande" résout automatiquement ce handler.
+    public string NomCommande => "ValiderCommandeCommand";
 
     public async Task ExecuterAsync(
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte)
     {
-        // aggregateId : ID de l'agrégat métier (votre commande, facture, etc.)
+        // aggregateId : ID de l'agrégat de l'instance (fourni automatiquement par le moteur)
         // parametres  : valeurs résolues depuis les variables du processus
         // contexte    : accès à la transaction, aux variables, à l'ID d'instance
 
@@ -126,15 +128,17 @@ public class ValiderCommandeHandler : IHandlerCommande
 }
 ```
 
-> Le `NomCommande` doit correspondre exactement à la valeur déclarée dans le nœud de la définition de processus.
+> **Convention de nommage :** le moteur calcule le `NomCommande` par défaut à partir de l'id du nœud :
+> `PascalCase(id) + "Command"` — ex. `"valider-commande"` → `"ValiderCommandeCommand"`.
+> Pour nommer différemment, utilisez `.CommandeNommee("AutreNom")` dans le builder.
 
-### 4.2 Handler de query (`IHandlerQuery<T>`)
+### 4.2 Handler de query (`IBpmHandlerQuery<T>`)
 
 Utilisé pour les conditions de nœud décision (`ConditionQuery`) et les dates d'échéance (`NoeudAttenteTemps`).
 
 ```csharp
 // Pour une condition booléenne
-public class EstCommandeUrgente : IHandlerQuery<bool>
+public class EstCommandeUrgente : IBpmHandlerQuery<bool>
 {
     public string NomQuery => "EstCommandeUrgente";
 
@@ -143,6 +147,7 @@ public class EstCommandeUrgente : IHandlerQuery<bool>
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte)
     {
+        // aggregateId vient automatiquement de l'instance (contexte.AggregateId)
         using var repo = new CommandeRepository(contexte.Transaction);
         var commande = await repo.ObtenirAsync(aggregateId!.Value);
         return commande.MontantTotal > 10_000;
@@ -150,7 +155,7 @@ public class EstCommandeUrgente : IHandlerQuery<bool>
 }
 
 // Pour résoudre une date d'échéance
-public class CalculerDateRelance : IHandlerQuery<DateTime>
+public class CalculerDateRelance : IBpmHandlerQuery<DateTime>
 {
     public string NomQuery => "CalculerDateRelance";
 
@@ -212,14 +217,13 @@ Deux approches sont disponibles : **Fluent C#** (recommandée pour les définiti
 var definition = new DefinitionProcessusBuilder("approbation-commande",
         "Processus d'approbation de commande", "valider-commande")
 
-    // Nœud métier compact : (id, nom, commande, aggregateVar, vers)
-    .AjouterNoeudMetier("valider-commande", "Valider la commande",
-        "ValiderCommande", "commandeId", "approbation-responsable")
+    // Nœud métier ultra-compact : id = commande (ValiderCommandeCommand), aggregate depuis l'instance
+    .AjouterNoeudMetier("valider-commande", "Valider la commande", vers: "approbation-responsable")
 
-    // Nœud interactif : DefinirTache(titre, desc) + AvecCommandePost(commande, aggregateVar)
+    // Nœud interactif : DefinirTache(titre, desc) + AvecCommandePost(nomCommande)
     .AjouterNoeudInteractif("approbation-responsable", "Approbation responsable", n => n
         .DefinirTache("Approuver la commande", "Veuillez approuver ou refuser la commande")
-        .AvecCommandePost("EnregistrerDecision", "commandeId")
+        .AvecCommandePost("EnregistrerDecisionCommand")
         .Vers("decision-approbation"))
 
     // Nœud décision : SiEgal / SiDifferent à la place de SiVariable(..., Operateur.Egal, ...)
@@ -228,32 +232,32 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
         .ParDefaut().Vers("notification-refus"))
 
     // Nœud final compact : vers omis → EstFinale implicite
-    .AjouterNoeudMetier("notification-approbation", "Notifier approbation",
-        "NotifierApprobation", "commandeId")
-    .AjouterNoeudMetier("notification-refus", "Notifier refus",
-        "NotifierRefus", "commandeId")
+    .AjouterNoeudMetier("notification-approbation", "Notifier approbation")
+    .AjouterNoeudMetier("notification-refus", "Notifier refus")
 
     .Construire();
 ```
 
-**Récapitulatif de tous les raccourcis disponibles :**
+> **Nommage des commandes :** par convention, le `NomCommande` d'un nœud est `PascalCase(id) + "Command"`.
+> Le nœud `"valider-commande"` résout automatiquement le handler dont `NomCommande == "ValiderCommandeCommand"`.
+> Utilisez `.CommandeNommee("NomExplicite")` dans la forme lambda pour déroger à cette convention.
 
-| Avant | Après |
-|-------|-------|
-| `new Builder("cle").Nommer("nom").Debuter("id")` | `new Builder("cle", "nom", "id")` |
-| `AjouterNoeudMetier("id", n => n.Nommer("X")...)` | `AjouterNoeudMetier("id", "X", n => n...)` |
-| `AjouterNoeudMetier("id","nom", n => n.CommandeNommee("X","y").Vers("z"))` | `AjouterNoeudMetier("id", "nom", "X", "y", "z")` |
-| `AjouterNoeudMetier("id","nom", n => n.CommandeNommee("X","y").EstFinale())` | `AjouterNoeudMetier("id", "nom", "X", "y")` |
-| `.CommandeNommee("X").AggregateIdDepuisVariable("y")` | `.CommandeNommee("X", "y")` |
-| `.DefinirTache(t => t.Titre("X").Description("Y"))` | `.DefinirTache("X", "Y")` |
-| `.AvecCommandePre("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePre("X", "y")` |
-| `.AvecCommandePost("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePost("X", "y")` |
-| `.SortieVariable("a").SortieVariable("b")` | `.SortiesVariables("a", "b")` |
-| `.SiVariable("x", Operateur.Egal, val)` | `.SiEgal("x", val)` |
-| `.SiVariable("x", Operateur.Different, val)` | `.SiDifferent("x", val)` |
-| `.SiVariable("x", Operateur.Superieur, val)` | `.SiSuperieur("x", val)` |
-| `.SiVariable("x", Operateur.Inferieur, val)` | `.SiInferieur("x", val)` |
-| `.SiVariable("x", Operateur.Contient, val)` | `.SiContient("x", val)` |
+**Récapitulatif des raccourcis disponibles :**
+
+| Raccourci | Description |
+|-----------|-------------|
+| `new Builder("cle", "nom", "id")` | Constructeur 3 paramètres |
+| `AjouterNoeudMetier("id", "nom", vers: "suivant")` | Compact : id → commande, aggregate depuis l'instance |
+| `AjouterNoeudMetier("id", "nom")` | Idem, nœud finale |
+| `AjouterNoeudMetier("id", "nom", n => n...)` | Lambda pour paramètres additionnels |
+| `.CommandeNommee("NomExplicite")` | Surcharge le nom de commande (déroge à la convention) |
+| `.DefinirTache("titre", "description")` | Raccourci sans sous-builder |
+| `.SortiesVariables("a", "b")` | Plusieurs variables de sortie en un appel |
+| `.SiEgal("x", val)` | `SiVariable(..., Operateur.Egal, ...)` |
+| `.SiDifferent("x", val)` | `SiVariable(..., Operateur.Different, ...)` |
+| `.SiSuperieur("x", val)` | `SiVariable(..., Operateur.Superieur, ...)` |
+| `.SiInferieur("x", val)` | `SiVariable(..., Operateur.Inferieur, ...)` |
+| `.SiContient("x", val)` | `SiVariable(..., Operateur.Contient, ...)` |
 
 ### 5.1.1 Nœud attente de temps
 
@@ -263,9 +267,9 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
     .EcheanceDepuisVariable("dateRelance")
     .Vers("envoyer-relance"))
 
-// Échéance calculée par une query, avec paramètres
+// Échéance calculée par une query, avec paramètres (aggregate depuis l'instance)
 .AjouterNoeudAttenteTemps("attente-validation", "Attente validation", n => n
-    .EcheanceDepuisQuery("CalculerDelaiValidation", "commandeId")
+    .EcheanceDepuisQuery("CalculerDelaiValidation")
     .ParametreQueryStatique("delaiJours", 7)
     .ParametreQueryDepuisVariable("priorite", "prioriteCommande")
     .Vers("valider"))
@@ -301,8 +305,7 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
       "id": "valider-commande",
       "type": "NoeudMetier",
       "nom": "Valider la commande",
-      "nomCommande": "ValiderCommande",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "ValiderCommandeCommand",
       "fluxSortants": [{ "vers": "approbation-responsable" }]
     },
     {
@@ -314,8 +317,7 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
         "description": "Veuillez approuver ou refuser la commande"
       },
       "commandePost": {
-        "nomCommande": "EnregistrerDecision",
-        "sourceAggregateId": { "type": "Variable", "nom": "commandeId" }
+        "nomCommande": "EnregistrerDecisionCommand"
       },
       "fluxSortants": [{ "vers": "decision-approbation" }]
     },
@@ -340,16 +342,14 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
       "id": "notification-approbation",
       "type": "NoeudMetier",
       "nom": "Notifier approbation",
-      "nomCommande": "NotifierApprobation",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "NotificationApprobationCommand",
       "estFinale": true
     },
     {
       "id": "notification-refus",
       "type": "NoeudMetier",
       "nom": "Notifier refus",
-      "nomCommande": "NotifierRefus",
-      "sourceAggregateId": { "type": "Variable", "nom": "commandeId" },
+      "nomCommande": "NotificationRefusCommand",
       "estFinale": true
     }
   ]
@@ -650,7 +650,7 @@ catch (Exception ex)
 
 | Type                  | Rôle                                                    | Suspend ? |
 |-----------------------|---------------------------------------------------------|-----------|
-| `NoeudMetier`         | Exécute un `IHandlerCommande`                           | Non       |
+| `NoeudMetier`         | Exécute un `IBpmHandlerCommande`                        | Non       |
 | `NoeudInteractif`     | Crée une tâche humaine via `IGestionTache`              | Oui       |
 | `NoeudDecision`       | Branchement XOR selon conditions                        | Non       |
 | `NoeudAttenteTemps`   | Suspend jusqu'à une date calculée                       | Oui       |
@@ -659,18 +659,13 @@ catch (Exception ex)
 
 ### Sources de paramètres par contexte
 
-**`NoeudMetier` — aggregate id :**
-
-| Méthode | Description |
-|---------|-------------|
-| `.CommandeNommee("X", "varId")` | Raccourci : commande + aggregate depuis une variable |
-| `.AggregateIdDepuisVariable("varId")` | Aggregate id depuis une variable du processus |
-| `.AggregateIdStatique(42L)` | Aggregate id fixe |
+> **Aggregate id :** toujours fourni automatiquement depuis `IContexteExecution.AggregateId` (transmis au démarrage de l'instance). Il n'est jamais à spécifier dans la définition du nœud.
 
 **`NoeudMetier` — paramètres additionnels :**
 
 | Méthode | Description |
 |---------|-------------|
+| `.CommandeNommee("NomExplicite")` | Surcharge le nom de commande (défaut : `PascalCase(id) + "Command"`) |
 | `.ParametreDepuisVariable("nomParam", "nomVar")` | Paramètre résolu depuis une variable |
 | `.ParametreStatique("nomParam", valeur)` | Paramètre à valeur fixe |
 
@@ -678,9 +673,9 @@ catch (Exception ex)
 
 | Méthode | Description |
 |---------|-------------|
-| `.AvecCommandePre("X", "varId")` | Raccourci aggregate id depuis une variable |
-| `.AvecCommandePre("X", p => p.ParametreDepuisVariable("n", "v"))` | Paramètre depuis variable |
-| `.AvecCommandePre("X", p => p.ParametreStatique("n", val))` | Paramètre statique |
+| `.AvecCommandePre("NomCommande")` | Commande PRE sans paramètre (aggregate depuis l'instance) |
+| `.AvecCommandePre("NomCommande", p => p.ParametreDepuisVariable("n", "v"))` | Avec paramètre depuis variable |
+| `.AvecCommandePre("NomCommande", p => p.ParametreStatique("n", val))` | Avec paramètre statique |
 | *(idem pour `.AvecCommandePost`)* | |
 
 **`NoeudAttenteTemps` — date d'échéance :**
@@ -689,8 +684,7 @@ catch (Exception ex)
 |---------|-------------|
 | `.EcheanceDepuisVariable("nomVar")` | Date lue depuis une variable (`DateTime`) |
 | `.EcheanceStatique(date)` | Date fixe dans la définition |
-| `.EcheanceDepuisQuery("NomQuery")` | Date calculée par un `IHandlerQuery<DateTime>` |
-| `.EcheanceDepuisQuery("NomQuery", "varId")` | Idem avec aggregate id depuis une variable |
+| `.EcheanceDepuisQuery("NomQuery")` | Date calculée par un `IBpmHandlerQuery<DateTime>` (aggregate depuis l'instance) |
 | `.ParametreQueryDepuisVariable("nomParam", "nomVar")` | Paramètre query depuis une variable |
 | `.ParametreQueryStatique("nomParam", valeur)` | Paramètre query à valeur fixe |
 
@@ -699,8 +693,7 @@ catch (Exception ex)
 | Méthode | Description |
 |---------|-------------|
 | `.SiVariable("nomVar", Operateur.X, valeur)` | Condition sur une variable du processus |
-| `.SiQuery("NomQuery")` | Condition évaluée par un `IHandlerQuery<bool>` |
-| `.SiQuery("NomQuery", "varId")` | Idem avec aggregate id depuis une variable |
+| `.SiQuery("NomQuery")` | Condition évaluée par un `IBpmHandlerQuery<bool>` (aggregate depuis l'instance) |
 | `.ParametreQueryDepuisVariable("nomParam", "nomVar")` | Paramètre query depuis une variable |
 | `.ParametreQueryStatique("nomParam", valeur)` | Paramètre query à valeur fixe |
 | `.ParDefaut()` | Branche de repli si aucune condition n'est vraie |

@@ -112,6 +112,7 @@ var processusLoan = new DefinitionProcessusBuilder(
         "creer-demande")
 
     // ── 1. NoeudMetier : création du dossier ──────────────────────────────
+    // CommandeNommee explicite car "CreerDossierPret" ≠ "CreerDemandeCommand" (convention)
     .AjouterNoeudMetier("creer-demande", "Créer le Dossier", b => b
         .CommandeNommee("CreerDossierPret")
         .ParametreDepuisVariable("clientId",  "clientIdVar")
@@ -146,25 +147,25 @@ var processusLoan = new DefinitionProcessusBuilder(
         .DefinirTache("Revue du dossier",
             "Analyser le dossier et renseigner la décision avant l'échéance.")
         .AvecCommandePre("PreparerRevueDossier", c => c
-            .AggregateIdDepuisVariable("dossierIdVar")
             .ParametreDepuisVariable("scoreCredit", "scoreCredit")
             .ParametreStatique("priorite", "HAUTE"))
         .AvecCommandePost("EnregistrerDecisionAnalyste", c => c
-            .AggregateIdDepuisVariable("dossierIdVar")
             .ParametreDepuisVariable("decision", "decisionAnalyste")
             .ParametreStatique("source", "ANALYSTE"))
         .Vers("attente-decision-superieur"))
 
     // ── 6. NoeudAttenteTemps : échéance calculée par query ────────────────
+    // L'aggregate id est transmis automatiquement depuis l'instance
     .AjouterNoeudAttenteTemps("attente-decision-superieur", "Attente Décision Supérieur", b => b
-        .EcheanceDepuisQuery("CalculerEcheanceRevue", "dossierIdVar")
+        .EcheanceDepuisQuery("CalculerEcheanceRevue")
         .ParametreQueryDepuisVariable("score", "scoreCredit")
         .ParametreQueryStatique("delaiJours", 5)
         .Vers("analyse-risque"))
 
     // ── 7. NoeudDecision : risque — query + conditions variable + défaut ──
+    // L'aggregate id est transmis automatiquement à la query
     .AjouterNoeudDecision("analyse-risque", "Analyse du Risque", b => b
-        .SiQuery("EstClientPremium", "clientIdVar")
+        .SiQuery("EstClientPremium")
             .ParametreQueryDepuisVariable("score", "kycScore")
             .Vers("approbation-rapide")
         .SiInferieur("montantDemande", 50_000)
@@ -174,7 +175,7 @@ var processusLoan = new DefinitionProcessusBuilder(
 
     // ── 8. NoeudMetier : approbation automatique ──────────────────────────
     .AjouterNoeudMetier("approbation-rapide", "Approbation Automatique", b => b
-        .CommandeNommee("ApprouverPret", "dossierIdVar")
+        .CommandeNommee("ApprouverPret")
         .ParametreStatique("canal",    "AUTO")
         .ParametreStatique("tauxBase", 2.5)
         .ParametreDepuisVariable("montant", "montantDemande")
@@ -185,10 +186,9 @@ var processusLoan = new DefinitionProcessusBuilder(
         .DefinirTache("Valider l'offre de prêt",
             "Vérifier les conditions et signer l'offre.")
         .AvecCommandePre("GenererOffrePret", c => c
-            .AggregateIdDepuisVariable("dossierIdVar")
             .ParametreDepuisVariable("montant", "montantDemande")
             .ParametreStatique("devise", "EUR"))
-        .AvecCommandePost("ValiderOffrePret", "dossierIdVar")
+        .AvecCommandePost("ValiderOffrePret")
         .Vers("notifier-approbation"))
 
     // ── 10. NoeudInteractif : validation comité ───────────────────────────
@@ -196,21 +196,20 @@ var processusLoan = new DefinitionProcessusBuilder(
         .DefinirTache("Présentation au Comité",
             "Soumettre le dossier au comité de crédit pour validation collégiale.")
         .AvecCommandePost("EnregistrerDecisionComite", c => c
-            .AggregateIdDepuisVariable("dossierIdVar")
             .ParametreDepuisVariable("montant", "montantDemande")
             .ParametreStatique("seuil", 100_000))
         .Vers("notifier-approbation"))
 
     // ── 11. NoeudMetier finale : notification approbation ────────────────
     .AjouterNoeudMetier("notifier-approbation", "Notifier l'Approbation", b => b
-        .CommandeNommee("EnvoyerNotification", "clientIdVar")
+        .CommandeNommee("EnvoyerNotification")
         .ParametreStatique("typeNotif", "APPROBATION")
         .ParametreDepuisVariable("montantAccorde", "montantDemande")
         .EstFinale())
 
     // ── 12. NoeudMetier finale : notification rejet ───────────────────────
     .AjouterNoeudMetier("notifier-rejet", "Notifier le Rejet", b => b
-        .CommandeNommee("EnvoyerNotification", "clientIdVar")
+        .CommandeNommee("EnvoyerNotification")
         .ParametreStatique("typeNotif", "REJET")
         .ParametreDepuisVariable("motifRejet", "kycStatut")
         .EstFinale())
