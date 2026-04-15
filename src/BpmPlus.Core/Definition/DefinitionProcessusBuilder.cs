@@ -238,8 +238,8 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
     public NoeudMetierBuilder(string id) : base(id) { }
 
     /// <summary>
-    /// Surcharge le nom de commande (par défaut : l'id du nœud).
-    /// À utiliser uniquement si la commande diffère de l'id.
+    /// Surcharge le nom de commande (par défaut : id du nœud + "Command", ex. "creer-dossierCommand").
+    /// À utiliser uniquement si la commande diffère de cette convention.
     /// </summary>
     public NoeudMetierBuilder CommandeNommee(string nomCommande)
     {
@@ -268,7 +268,7 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
         Nom = _nom,
         EstFinale = _estFinale,
         FluxSortants = _fluxSortants,
-        NomCommande = string.IsNullOrEmpty(_nomCommande) ? _id : _nomCommande,
+        NomCommande = string.IsNullOrEmpty(_nomCommande) ? _id + "Command" : _nomCommande,
         Parametres = _parametres
     };
 }
