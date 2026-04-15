@@ -51,6 +51,43 @@ public class DefinitionProcessusBuilder
     }
 
     /// <summary>
+    /// Nœud métier ultra-compact : l'id du nœud sert de nom de commande et l'aggregate id
+    /// est lu depuis la variable <paramref name="aggregateIdVariable"/>.
+    /// Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(
+        string id, string aggregateIdVariable, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.CommandeNommee(id, aggregateIdVariable);
+        if (vers is not null)
+            builder.Vers(vers);
+        else
+            builder.EstFinale();
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
+    /// Nœud métier compact avec nom d'affichage : l'id du nœud sert de nom de commande et l'aggregate id
+    /// est lu depuis la variable <paramref name="aggregateIdVariable"/>.
+    /// Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(
+        string id, string nom, string aggregateIdVariable, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.Nommer(nom);
+        builder.CommandeNommee(id, aggregateIdVariable);
+        if (vers is not null)
+            builder.Vers(vers);
+        else
+            builder.EstFinale();
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
     /// Nœud métier compact sans lambda. Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
     /// </summary>
     public DefinitionProcessusBuilder AjouterNoeudMetier(
@@ -219,6 +256,21 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
     public NoeudMetierBuilder CommandeNommee(string nomCommande, string aggregateIdVariable)
     {
         _nomCommande = nomCommande;
+        _sourceAggregateId = new SourceVariable(aggregateIdVariable);
+        return this;
+    }
+
+    /// <summary>Utilise l'id du nœud comme nom de commande.</summary>
+    public NoeudMetierBuilder CommandeParId()
+    {
+        _nomCommande = _id;
+        return this;
+    }
+
+    /// <summary>Utilise l'id du nœud comme nom de commande et lit l'aggregate id depuis la variable.</summary>
+    public NoeudMetierBuilder CommandeParId(string aggregateIdVariable)
+    {
+        _nomCommande = _id;
         _sourceAggregateId = new SourceVariable(aggregateIdVariable);
         return this;
     }
