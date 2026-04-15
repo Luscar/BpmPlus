@@ -18,6 +18,5 @@ public record SourceValeurStatique(
 
 public record SourceQuery(
     [property: JsonPropertyName("nomQuery")] string NomQuery,
-    [property: JsonPropertyName("sourceAggregateId")] ISourceParametre? SourceAggregateId = null,
     [property: JsonPropertyName("parametres")] Dictionary<string, ISourceParametre>? Parametres = null
 ) : ISourceParametre;

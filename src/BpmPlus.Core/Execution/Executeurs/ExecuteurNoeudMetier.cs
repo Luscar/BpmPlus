@@ -28,14 +28,13 @@ public class ExecuteurNoeudMetier
         _logger.LogInformation("Exécution NoeudMetier '{NomCommande}' (nœud '{Id}')",
             noeud.NomCommande, noeud.Id);
 
-        var handler = _scope.ResolveKeyed<IHandlerCommande>(noeud.NomCommande)
+        var handler = _scope.ResolveKeyed<IBpmHandlerCommande>(noeud.NomCommande)
             ?? throw new InvalidOperationException(
-                $"Aucun IHandlerCommande enregistré pour la commande '{noeud.NomCommande}'.");
+                $"Aucun IBpmHandlerCommande enregistré pour la commande '{noeud.NomCommande}'.");
 
-        var aggregateId = await _resolveur.ResolveAggregateIdAsync(noeud.SourceAggregateId, contexte, ct);
         var parametres = await _resolveur.ResolveParametresAsync(noeud.Parametres, contexte, ct);
 
-        await handler.ExecuterAsync(aggregateId, parametres, contexte);
+        await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
@@ -49,13 +48,12 @@ public class ExecuteurNoeudMetier
         IContexteExecution contexte,
         CancellationToken ct)
     {
-        var handler = _scope.ResolveKeyed<IHandlerCommande>(def.NomCommande)
+        var handler = _scope.ResolveKeyed<IBpmHandlerCommande>(def.NomCommande)
             ?? throw new InvalidOperationException(
-                $"Aucun IHandlerCommande enregistré pour la commande '{def.NomCommande}'.");
+                $"Aucun IBpmHandlerCommande enregistré pour la commande '{def.NomCommande}'.");
 
-        var aggregateId = await _resolveur.ResolveAggregateIdAsync(def.SourceAggregateId, contexte, ct);
         var parametres = await _resolveur.ResolveParametresAsync(def.Parametres, contexte, ct);
 
-        await handler.ExecuterAsync(aggregateId, parametres, contexte);
+        await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
     }
 }

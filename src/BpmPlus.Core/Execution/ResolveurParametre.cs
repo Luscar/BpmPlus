@@ -7,6 +7,7 @@ namespace BpmPlus.Core.Execution;
 /// <summary>
 /// Résout les ISourceParametre et évalue les ICondition en déléguant les queries
 /// aux handlers enregistrés dans le conteneur Autofac.
+/// L'aggregate id est toujours fourni par IContexteExecution.AggregateId.
 /// </summary>
 public class ResolveurParametre
 {
@@ -41,17 +42,6 @@ public class ResolveurParametre
             default:
                 throw new InvalidOperationException($"Type de source non supporté : {source.GetType().Name}");
         }
-    }
-
-    public async Task<long?> ResolveAggregateIdAsync(
-        ISourceParametre? source,
-        IContexteExecution contexte,
-        CancellationToken ct)
-    {
-        if (source is null) return null;
-        var valeur = await ResolveAsync(source, contexte, ct);
-        if (valeur is null) return null;
-        return Convert.ToInt64(valeur);
     }
 
     public async Task<IReadOnlyDictionary<string, object?>> ResolveParametresAsync(
@@ -137,12 +127,8 @@ public class ResolveurParametre
     {
         _logger.LogDebug("Résolution SourceQuery '{NomQuery}'", sq.NomQuery);
 
-        if (!_scope.TryResolveKeyed<IHandlerQuery>(sq.NomQuery, out var handler))
-            throw new InvalidOperationException($"Aucun IHandlerQuery enregistré pour la query '{sq.NomQuery}'.");
-
-        var aggregateId = sq.SourceAggregateId != null
-            ? await ResolveAggregateIdAsync(sq.SourceAggregateId, contexte, ct)
-            : null;
+        if (!_scope.TryResolveKeyed<IBpmHandlerQuery>(sq.NomQuery, out var handler))
+            throw new InvalidOperationException($"Aucun IBpmHandlerQuery enregistré pour la query '{sq.NomQuery}'.");
 
         var parametres = sq.Parametres != null
             ? await ResolveParametresAsync(sq.Parametres, contexte, ct)
@@ -151,13 +137,13 @@ public class ResolveurParametre
         // Invoquer via réflexion car le type générique est inconnu à la compilation
         var interfaceType = handler.GetType()
             .GetInterfaces()
-            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IHandlerQuery<>));
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IBpmHandlerQuery<>));
 
         if (interfaceType is null)
-            throw new InvalidOperationException($"Le handler '{sq.NomQuery}' n'implémente pas IHandlerQuery<T>.");
+            throw new InvalidOperationException($"Le handler '{sq.NomQuery}' n'implémente pas IBpmHandlerQuery<T>.");
 
         var methode = interfaceType.GetMethod("ExecuterAsync")!;
-        var tache = (Task)methode.Invoke(handler, [aggregateId, parametres, contexte])!;
+        var tache = (Task)methode.Invoke(handler, [contexte.AggregateId, parametres, contexte])!;
         await tache;
         var resultProperty = tache.GetType().GetProperty("Result");
         return resultProperty?.GetValue(tache);
@@ -167,17 +153,13 @@ public class ResolveurParametre
     {
         _logger.LogDebug("Évaluation ConditionQuery '{NomQuery}'", cq.NomQuery);
 
-        if (!_scope.TryResolveKeyed<IHandlerQuery<bool>>(cq.NomQuery, out var handler))
-            throw new InvalidOperationException($"Aucun IHandlerQuery<bool> enregistré pour la query '{cq.NomQuery}'.");
-
-        var aggregateId = cq.SourceAggregateId != null
-            ? await ResolveAggregateIdAsync(cq.SourceAggregateId, contexte, ct)
-            : null;
+        if (!_scope.TryResolveKeyed<IBpmHandlerQuery<bool>>(cq.NomQuery, out var handler))
+            throw new InvalidOperationException($"Aucun IBpmHandlerQuery<bool> enregistré pour la query '{cq.NomQuery}'.");
 
         var parametres = cq.Parametres != null
             ? await ResolveParametresAsync(cq.Parametres, contexte, ct)
             : (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>();
 
-        return await handler.ExecuterAsync(aggregateId, parametres, contexte);
+        return await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
     }
 }

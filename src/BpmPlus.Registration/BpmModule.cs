@@ -130,25 +130,25 @@ public class BpmModule : Autofac.Module
     {
         foreach (var assembly in _config.AssembliesHandlers)
         {
-            // Découverte des IHandlerCommande
+            // Découverte des IBpmHandlerCommande
             var commandeTypes = assembly.GetTypes()
                 .Where(t => t.IsClass && !t.IsAbstract
-                            && typeof(IHandlerCommande).IsAssignableFrom(t));
+                            && typeof(IBpmHandlerCommande).IsAssignableFrom(t));
 
             foreach (var type in commandeTypes)
             {
                 builder.RegisterType(type)
-                    .As<IHandlerCommande>()
-                    .Keyed<IHandlerCommande>(GetNomCommande(type))
+                    .As<IBpmHandlerCommande>()
+                    .Keyed<IBpmHandlerCommande>(GetNomCommande(type))
                     .InstancePerLifetimeScope();
             }
 
-            // Découverte des IHandlerQuery<T>
+            // Découverte des IBpmHandlerQuery<T>
             var queryTypes = assembly.GetTypes()
                 .Where(t => t.IsClass && !t.IsAbstract
                             && t.GetInterfaces().Any(i =>
                                 i.IsGenericType &&
-                                i.GetGenericTypeDefinition() == typeof(IHandlerQuery<>)));
+                                i.GetGenericTypeDefinition() == typeof(IBpmHandlerQuery<>)));
 
             foreach (var type in queryTypes)
             {
@@ -156,12 +156,12 @@ public class BpmModule : Autofac.Module
                 if (nomQuery is null) continue;
 
                 builder.RegisterType(type)
-                    .As<IHandlerQuery>()
-                    .Keyed<IHandlerQuery>(nomQuery)
+                    .As<IBpmHandlerQuery>()
+                    .Keyed<IBpmHandlerQuery>(nomQuery)
                     .InstancePerLifetimeScope();
 
                 var queryInterfaces = type.GetInterfaces()
-                    .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IHandlerQuery<>));
+                    .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IBpmHandlerQuery<>));
 
                 foreach (var iface in queryInterfaces)
                 {

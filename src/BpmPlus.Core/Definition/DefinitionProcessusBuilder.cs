@@ -33,6 +33,37 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    // ── NoeudMetier ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Nœud métier ultra-compact : l'id sert de nom de commande, l'aggregate id vient du contexte.
+    /// Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(string id, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        if (vers is not null) builder.Vers(vers); else builder.EstFinale();
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
+    /// Nœud métier compact avec nom d'affichage : l'id sert de nom de commande, l'aggregate id vient du contexte.
+    /// Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(string id, string nom, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.Nommer(nom);
+        if (vers is not null) builder.Vers(vers); else builder.EstFinale();
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
+    /// Nœud métier avec lambda pour ajouter des paramètres ou surcharger le nom de commande.
+    /// Par défaut, la commande est l'id du nœud et l'aggregate id vient du contexte.
+    /// </summary>
     public DefinitionProcessusBuilder AjouterNoeudMetier(string id, Action<NoeudMetierBuilder> configure)
     {
         var builder = new NoeudMetierBuilder(id);
@@ -41,6 +72,9 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    /// <summary>
+    /// Nœud métier avec nom d'affichage et lambda pour ajouter des paramètres ou surcharger le nom de commande.
+    /// </summary>
     public DefinitionProcessusBuilder AjouterNoeudMetier(string id, string nom, Action<NoeudMetierBuilder> configure)
     {
         var builder = new NoeudMetierBuilder(id);
@@ -50,22 +84,7 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
-    /// <summary>
-    /// Nœud métier compact sans lambda. Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
-    /// </summary>
-    public DefinitionProcessusBuilder AjouterNoeudMetier(
-        string id, string nom, string commande, string aggregateIdVariable, string? vers = null)
-    {
-        var builder = new NoeudMetierBuilder(id);
-        builder.Nommer(nom);
-        builder.CommandeNommee(commande, aggregateIdVariable);
-        if (vers is not null)
-            builder.Vers(vers);
-        else
-            builder.EstFinale();
-        _noeuds.Add(builder.Construire());
-        return this;
-    }
+    // ── NoeudInteractif ───────────────────────────────────────────────────────
 
     public DefinitionProcessusBuilder AjouterNoeudInteractif(string id, Action<NoeudInteractifBuilder> configure)
     {
@@ -84,6 +103,8 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    // ── NoeudDecision ─────────────────────────────────────────────────────────
+
     public DefinitionProcessusBuilder AjouterNoeudDecision(string id, Action<NoeudDecisionBuilder> configure)
     {
         var builder = new NoeudDecisionBuilder(id);
@@ -100,6 +121,8 @@ public class DefinitionProcessusBuilder
         _noeuds.Add(builder.Construire());
         return this;
     }
+
+    // ── NoeudAttenteTemps ─────────────────────────────────────────────────────
 
     public DefinitionProcessusBuilder AjouterNoeudAttenteTemps(string id, Action<NoeudAttenteTempsBuilder> configure)
     {
@@ -118,6 +141,8 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    // ── NoeudAttenteSignal ────────────────────────────────────────────────────
+
     public DefinitionProcessusBuilder AjouterNoeudAttenteSignal(string id, Action<NoeudAttenteSignalBuilder> configure)
     {
         var builder = new NoeudAttenteSignalBuilder(id);
@@ -135,6 +160,8 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    // ── NoeudSousProcessus ────────────────────────────────────────────────────
+
     public DefinitionProcessusBuilder AjouterNoeudSousProcessus(string id, Action<NoeudSousProcessusBuilder> configure)
     {
         var builder = new NoeudSousProcessusBuilder(id);
@@ -151,6 +178,8 @@ public class DefinitionProcessusBuilder
         _noeuds.Add(builder.Construire());
         return this;
     }
+
+    // ── Construction ──────────────────────────────────────────────────────────
 
     public DefinitionProcessus Construire()
     {
@@ -204,34 +233,18 @@ public abstract class NoeudBaseBuilder<TBuilder, TNoeud>
 public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMetier>
 {
     private string _nomCommande = string.Empty;
-    private ISourceParametre? _sourceAggregateId;
     private readonly Dictionary<string, ISourceParametre> _parametres = new();
 
     public NoeudMetierBuilder(string id) : base(id) { }
 
+    /// <summary>
+    /// Surcharge le nom de commande (par défaut : PascalCase(id) + "Command",
+    /// ex. "creer-dossier" → "CreerDossierCommand").
+    /// À utiliser uniquement si la commande diffère de cette convention.
+    /// </summary>
     public NoeudMetierBuilder CommandeNommee(string nomCommande)
     {
         _nomCommande = nomCommande;
-        return this;
-    }
-
-    /// <summary>Définit la commande et l'aggregate id (depuis une variable) en un seul appel.</summary>
-    public NoeudMetierBuilder CommandeNommee(string nomCommande, string aggregateIdVariable)
-    {
-        _nomCommande = nomCommande;
-        _sourceAggregateId = new SourceVariable(aggregateIdVariable);
-        return this;
-    }
-
-    public NoeudMetierBuilder AggregateIdDepuisVariable(string nomVariable)
-    {
-        _sourceAggregateId = new SourceVariable(nomVariable);
-        return this;
-    }
-
-    public NoeudMetierBuilder AggregateIdStatique(long aggregateId)
-    {
-        _sourceAggregateId = new SourceValeurStatique(aggregateId);
         return this;
     }
 
@@ -247,16 +260,29 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
         return this;
     }
 
+    /// <summary>
+    /// Construit le NoeudMetier. Le NomCommande par défaut est PascalCase(id) + "Command".
+    /// </summary>
     public override NoeudMetier Construire() => new()
     {
         Id = _id,
         Nom = _nom,
         EstFinale = _estFinale,
         FluxSortants = _fluxSortants,
-        NomCommande = _nomCommande,
-        SourceAggregateId = _sourceAggregateId,
+        NomCommande = string.IsNullOrEmpty(_nomCommande) ? NomCommandeParDefaut(_id) : _nomCommande,
         Parametres = _parametres
     };
+
+    /// <summary>
+    /// Convertit un id kebab-case ou snake_case en PascalCase et ajoute le suffixe "Command".
+    /// "creer-dossier" → "CreerDossierCommand", "valider_kyc" → "ValiderKycCommand".
+    /// </summary>
+    internal static string NomCommandeParDefaut(string id)
+    {
+        var parts = id.Split(['-', '_', ' '], StringSplitOptions.RemoveEmptyEntries);
+        var pascal = string.Concat(parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+        return pascal + "Command";
+    }
 }
 
 public class NoeudInteractifBuilder : NoeudBaseBuilder<NoeudInteractifBuilder, NoeudInteractif>
@@ -290,33 +316,11 @@ public class NoeudInteractifBuilder : NoeudBaseBuilder<NoeudInteractifBuilder, N
         return this;
     }
 
-    /// <summary>Définit la commande PRE avec aggregate id (depuis une variable) en un seul appel.</summary>
-    public NoeudInteractifBuilder AvecCommandePre(string nomCommande, string aggregateIdVariable)
-    {
-        _commandePre = new DefinitionCommande
-        {
-            NomCommande = nomCommande,
-            SourceAggregateId = new SourceVariable(aggregateIdVariable)
-        };
-        return this;
-    }
-
     public NoeudInteractifBuilder AvecCommandePost(string nomCommande, Action<CommandeBuilder>? configure = null)
     {
         var builder = new CommandeBuilder(nomCommande);
         configure?.Invoke(builder);
         _commandePost = builder.Construire();
-        return this;
-    }
-
-    /// <summary>Définit la commande POST avec aggregate id (depuis une variable) en un seul appel.</summary>
-    public NoeudInteractifBuilder AvecCommandePost(string nomCommande, string aggregateIdVariable)
-    {
-        _commandePost = new DefinitionCommande
-        {
-            NomCommande = nomCommande,
-            SourceAggregateId = new SourceVariable(aggregateIdVariable)
-        };
         return this;
     }
 
@@ -366,24 +370,13 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
     public FluxSortantBuilder SiContient(string nomVariable, string valeur)
         => SiVariable(nomVariable, Operateur.Contient, valeur);
 
+    /// <summary>Condition query — l'aggregate id vient du contexte.</summary>
     public FluxSortantBuilder SiQuery(string nomQuery,
-        ISourceParametre? sourceAggregateId = null,
         Dictionary<string, ISourceParametre>? parametres = null)
     {
         var flux = new FluxSortant
         {
-            Condition = new ConditionQuery(nomQuery, sourceAggregateId, parametres)
-        };
-        _fluxSortants.Add(flux);
-        return new FluxSortantBuilder(this, flux);
-    }
-
-    /// <summary>Condition query avec aggregate id depuis une variable — paramètres ajoutables via ParametreQuery*.</summary>
-    public FluxSortantBuilder SiQuery(string nomQuery, string aggregateIdVariable)
-    {
-        var flux = new FluxSortant
-        {
-            Condition = new ConditionQuery(nomQuery, new SourceVariable(aggregateIdVariable))
+            Condition = new ConditionQuery(nomQuery, parametres)
         };
         _fluxSortants.Add(flux);
         return new FluxSortantBuilder(this, flux);
@@ -396,7 +389,6 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
         return new FluxSortantBuilder(this, flux);
     }
 
-    // Override Vers n'est pas applicable sur un NoeudDecision sans condition
     public override NoeudDecision Construire() => new()
     {
         Id = _id,
@@ -472,17 +464,10 @@ public class NoeudAttenteTempsBuilder : NoeudBaseBuilder<NoeudAttenteTempsBuilde
         return this;
     }
 
-    public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery,
-        ISourceParametre? sourceAggregateId = null)
+    /// <summary>Échéance via query — l'aggregate id vient du contexte.</summary>
+    public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery)
     {
-        _sourceDate = new SourceQuery(nomQuery, sourceAggregateId, new Dictionary<string, ISourceParametre>());
-        return this;
-    }
-
-    /// <summary>Échéance via query avec aggregate id depuis une variable.</summary>
-    public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery, string aggregateIdVariable)
-    {
-        _sourceDate = new SourceQuery(nomQuery, new SourceVariable(aggregateIdVariable), new Dictionary<string, ISourceParametre>());
+        _sourceDate = new SourceQuery(nomQuery, new Dictionary<string, ISourceParametre>());
         return this;
     }
 
@@ -584,22 +569,9 @@ public class TacheBuilder
 public class CommandeBuilder
 {
     private readonly string _nomCommande;
-    private ISourceParametre? _sourceAggregateId;
     private readonly Dictionary<string, ISourceParametre> _parametres = new();
 
     public CommandeBuilder(string nomCommande) => _nomCommande = nomCommande;
-
-    public CommandeBuilder AggregateIdDepuisVariable(string nomVariable)
-    {
-        _sourceAggregateId = new SourceVariable(nomVariable);
-        return this;
-    }
-
-    public CommandeBuilder AggregateIdStatique(long aggregateId)
-    {
-        _sourceAggregateId = new SourceValeurStatique(aggregateId);
-        return this;
-    }
 
     public CommandeBuilder ParametreDepuisVariable(string nomParam, string nomVariable)
     {
@@ -616,7 +588,6 @@ public class CommandeBuilder
     public DefinitionCommande Construire() => new()
     {
         NomCommande = _nomCommande,
-        SourceAggregateId = _sourceAggregateId,
         Parametres = _parametres
     };
 }

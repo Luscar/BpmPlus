@@ -15,6 +15,5 @@ public record ConditionVariable(
 
 public record ConditionQuery(
     [property: JsonPropertyName("nomQuery")] string NomQuery,
-    [property: JsonPropertyName("sourceAggregateId")] ISourceParametre? SourceAggregateId = null,
     [property: JsonPropertyName("parametres")] Dictionary<string, ISourceParametre>? Parametres = null
 ) : ICondition;
