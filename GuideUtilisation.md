@@ -1,6 +1,6 @@
 # Guide d'utilisation — BpmPlus (application cliente)
 
-> Version : 1.1 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
+> Version : 1.2 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
 
 ---
 
@@ -207,50 +207,53 @@ Deux approches sont disponibles : **Fluent C#** (recommandée pour les définiti
 
 ### 5.1 Approche Fluent C#
 
-Le nom du nœud peut être passé directement en deuxième argument de `Ajouter*`, et les attributs courants se combinent en un seul appel :
-
 ```csharp
-var definition = new DefinitionProcessusBuilder("approbation-commande")
-    .Nommer("Processus d'approbation de commande")
-    .Debuter("valider-commande")
+// Clé + nom + nœud de début en une seule ligne
+var definition = new DefinitionProcessusBuilder("approbation-commande",
+        "Processus d'approbation de commande", "valider-commande")
 
-    // Nom en 2e argument — CommandeNommee(commande, aggregateIdVariable) en un appel
-    .AjouterNoeudMetier("valider-commande", "Valider la commande", n => n
-        .CommandeNommee("ValiderCommande", "commandeId")
-        .Vers("approbation-responsable"))
+    // Nœud métier compact : (id, nom, commande, aggregateVar, vers)
+    .AjouterNoeudMetier("valider-commande", "Valider la commande",
+        "ValiderCommande", "commandeId", "approbation-responsable")
 
-    // DefinirTache(titre, description) sans sous-builder
-    // AvecCommandePost(commande, aggregateIdVariable) en un appel
+    // Nœud interactif : DefinirTache(titre, desc) + AvecCommandePost(commande, aggregateVar)
     .AjouterNoeudInteractif("approbation-responsable", "Approbation responsable", n => n
         .DefinirTache("Approuver la commande", "Veuillez approuver ou refuser la commande")
         .AvecCommandePost("EnregistrerDecision", "commandeId")
         .Vers("decision-approbation"))
 
+    // Nœud décision : SiEgal / SiDifferent à la place de SiVariable(..., Operateur.Egal, ...)
     .AjouterNoeudDecision("decision-approbation", "Décision d'approbation", n => n
-        .SiVariable("statut", Operateur.Egal, "Approuvee").Vers("notification-approbation")
+        .SiEgal("statut", "Approuvee").Vers("notification-approbation")
         .ParDefaut().Vers("notification-refus"))
 
-    .AjouterNoeudMetier("notification-approbation", "Notifier approbation", n => n
-        .CommandeNommee("NotifierApprobation", "commandeId")
-        .EstFinale())
-
-    .AjouterNoeudMetier("notification-refus", "Notifier refus", n => n
-        .CommandeNommee("NotifierRefus", "commandeId")
-        .EstFinale())
+    // Nœud final compact : vers omis → EstFinale implicite
+    .AjouterNoeudMetier("notification-approbation", "Notifier approbation",
+        "NotifierApprobation", "commandeId")
+    .AjouterNoeudMetier("notification-refus", "Notifier refus",
+        "NotifierRefus", "commandeId")
 
     .Construire();
 ```
 
-**Récapitulatif des raccourcis disponibles :**
+**Récapitulatif de tous les raccourcis disponibles :**
 
 | Avant | Après |
 |-------|-------|
+| `new Builder("cle").Nommer("nom").Debuter("id")` | `new Builder("cle", "nom", "id")` |
 | `AjouterNoeudMetier("id", n => n.Nommer("X")...)` | `AjouterNoeudMetier("id", "X", n => n...)` |
+| `AjouterNoeudMetier("id","nom", n => n.CommandeNommee("X","y").Vers("z"))` | `AjouterNoeudMetier("id", "nom", "X", "y", "z")` |
+| `AjouterNoeudMetier("id","nom", n => n.CommandeNommee("X","y").EstFinale())` | `AjouterNoeudMetier("id", "nom", "X", "y")` |
 | `.CommandeNommee("X").AggregateIdDepuisVariable("y")` | `.CommandeNommee("X", "y")` |
 | `.DefinirTache(t => t.Titre("X").Description("Y"))` | `.DefinirTache("X", "Y")` |
 | `.AvecCommandePre("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePre("X", "y")` |
 | `.AvecCommandePost("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePost("X", "y")` |
-| `.SortieVariable("a").SortieVariable("b").SortieVariable("c")` | `.SortiesVariables("a", "b", "c")` |
+| `.SortieVariable("a").SortieVariable("b")` | `.SortiesVariables("a", "b")` |
+| `.SiVariable("x", Operateur.Egal, val)` | `.SiEgal("x", val)` |
+| `.SiVariable("x", Operateur.Different, val)` | `.SiDifferent("x", val)` |
+| `.SiVariable("x", Operateur.Superieur, val)` | `.SiSuperieur("x", val)` |
+| `.SiVariable("x", Operateur.Inferieur, val)` | `.SiInferieur("x", val)` |
+| `.SiVariable("x", Operateur.Contient, val)` | `.SiContient("x", val)` |
 
 ### 5.1.1 Nœud attente de temps
 

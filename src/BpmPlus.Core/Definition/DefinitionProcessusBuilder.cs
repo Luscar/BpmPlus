@@ -14,6 +14,17 @@ public class DefinitionProcessusBuilder
 
     public DefinitionProcessusBuilder(string cle) => _cle = cle;
 
+    /// <summary>Crée le builder avec la clé et le nom en une seule instruction.</summary>
+    public DefinitionProcessusBuilder(string cle, string nom) { _cle = cle; _nom = nom; }
+
+    /// <summary>Crée le builder avec clé, nom et nœud de début en une seule instruction.</summary>
+    public DefinitionProcessusBuilder(string cle, string nom, string noeudDebutId)
+    {
+        _cle = cle;
+        _nom = nom;
+        _noeudDebutId = noeudDebutId;
+    }
+
     public DefinitionProcessusBuilder Nommer(string nom) { _nom = nom; return this; }
 
     public DefinitionProcessusBuilder Debuter(string idPremierNoeud)
@@ -35,6 +46,23 @@ public class DefinitionProcessusBuilder
         var builder = new NoeudMetierBuilder(id);
         builder.Nommer(nom);
         configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
+    /// Nœud métier compact sans lambda. Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(
+        string id, string nom, string commande, string aggregateIdVariable, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.Nommer(nom);
+        builder.CommandeNommee(commande, aggregateIdVariable);
+        if (vers is not null)
+            builder.Vers(vers);
+        else
+            builder.EstFinale();
         _noeuds.Add(builder.Construire());
         return this;
     }
@@ -317,6 +345,26 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
         _fluxSortants.Add(flux);
         return new FluxSortantBuilder(this, flux);
     }
+
+    /// <summary>Condition : variable == valeur.</summary>
+    public FluxSortantBuilder SiEgal(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Egal, valeur);
+
+    /// <summary>Condition : variable != valeur.</summary>
+    public FluxSortantBuilder SiDifferent(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Different, valeur);
+
+    /// <summary>Condition : variable > valeur.</summary>
+    public FluxSortantBuilder SiSuperieur(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Superieur, valeur);
+
+    /// <summary>Condition : variable < valeur.</summary>
+    public FluxSortantBuilder SiInferieur(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Inferieur, valeur);
+
+    /// <summary>Condition : variable contient valeur (string).</summary>
+    public FluxSortantBuilder SiContient(string nomVariable, string valeur)
+        => SiVariable(nomVariable, Operateur.Contient, valeur);
 
     public FluxSortantBuilder SiQuery(string nomQuery,
         ISourceParametre? sourceAggregateId = null,
