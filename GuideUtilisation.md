@@ -1,6 +1,6 @@
 # Guide d'utilisation — BpmPlus (application cliente)
 
-> Version : 1.0 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
+> Version : 1.1 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
 
 ---
 
@@ -251,6 +251,34 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
 | `.AvecCommandePre("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePre("X", "y")` |
 | `.AvecCommandePost("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePost("X", "y")` |
 | `.SortieVariable("a").SortieVariable("b").SortieVariable("c")` | `.SortiesVariables("a", "b", "c")` |
+
+### 5.1.1 Nœud attente de temps
+
+```csharp
+.AjouterNoeudAttenteTemps("attente-relance", "Attente avant relance", n => n
+    .EcheanceDepuisVariable("dateRelance")   // date stockée dans une variable
+    // OU .EcheanceStatique(DateTime.UtcNow.AddDays(7))
+    // OU .EcheanceDepuisQuery("CalculerDateRelance")
+    .Vers("envoyer-relance"))
+```
+
+### 5.1.2 Nœud attente de signal
+
+```csharp
+.AjouterNoeudAttenteSignal("attente-paiement", "Attendre paiement", n => n
+    .Signal("PaiementRecu")
+    .Vers("confirmer-commande"))
+```
+
+### 5.1.3 Nœud sous-processus
+
+```csharp
+// SortiesVariables(params) pour remonter plusieurs variables en un appel
+.AjouterNoeudSousProcessus("verif-credit", "Vérification crédit", n => n
+    .DefinitionEnfant("verification-credit", version: 1)
+    .SortiesVariables("scoringCredit", "limiteAutorisee")
+    .Vers("decision-credit"))
+```
 
 ### 5.2 Approche JSON
 
@@ -620,13 +648,38 @@ catch (Exception ex)
 | `NoeudAttenteSignal`  | Suspend jusqu'à la réception d'un signal nommé          | Oui       |
 | `NoeudSousProcessus`  | Exécute un processus enfant dans la même transaction    | Si enfant suspend |
 
-### Sources de paramètres (`ISourceParametre`)
+### Sources de paramètres par contexte
 
-| Source               | Syntaxe Fluent                          | Description                              |
-|----------------------|-----------------------------------------|------------------------------------------|
-| Variable du processus | `.DepuisVariable("nomVariable")`       | Lit la valeur depuis les variables       |
-| Valeur statique      | `.ValeurStatique("valeur")`             | Valeur fixe dans la définition           |
-| Query                | `.DepuisQuery("NomQuery")`              | Appelle un `IHandlerQuery<T>`            |
+**`NoeudMetier` — aggregate id :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.CommandeNommee("X", "varId")` | Raccourci : commande + aggregate depuis une variable |
+| `.AggregateIdDepuisVariable("varId")` | Aggregate id depuis une variable du processus |
+| `.AggregateIdStatique(42L)` | Aggregate id fixe |
+
+**`NoeudMetier` — paramètres additionnels :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.ParametreDepuisVariable("nomParam", "nomVar")` | Paramètre résolu depuis une variable |
+| `.ParametreStatique("nomParam", valeur)` | Paramètre à valeur fixe |
+
+**`NoeudAttenteTemps` — date d'échéance :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.EcheanceDepuisVariable("nomVar")` | Date lue depuis une variable (`DateTime`) |
+| `.EcheanceStatique(date)` | Date fixe dans la définition |
+| `.EcheanceDepuisQuery("NomQuery")` | Date calculée par un `IHandlerQuery<DateTime>` |
+
+**`NoeudDecision` — conditions :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.SiVariable("nomVar", Operateur.X, valeur)` | Condition sur une variable du processus |
+| `.SiQuery("NomQuery")` | Condition évaluée par un `IHandlerQuery<bool>` |
+| `.ParDefaut()` | Branche de repli si aucune condition n'est vraie |
 
 ### Opérateurs de condition (`ConditionVariable`)
 
