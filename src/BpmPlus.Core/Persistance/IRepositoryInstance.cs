@@ -5,14 +5,14 @@ namespace BpmPlus.Core.Persistance;
 
 public interface IRepositoryInstance
 {
-    Task<long> CreerAsync(InstanceProcessus instance, IDbTransaction transaction, CancellationToken ct = default);
-    Task<InstanceProcessus?> ObtenirParIdAsync(long id, IDbTransaction transaction, CancellationToken ct = default);
-    Task<InstanceProcessus?> ObtenirActiveParAggregateAsync(string cleDefinition, long aggregateId, IDbTransaction transaction, CancellationToken ct = default);
-    Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(long idParent, IDbTransaction transaction, CancellationToken ct = default);
-    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(string nomVariable, string valeurSerialisee, IDbTransaction transaction, CancellationToken ct = default);
-    Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(IDbTransaction transaction, CancellationToken ct = default);
-    Task MettreAJourStatutAsync(long id, StatutInstance statut, string? idNoeudCourant, DateTime? dateFin, IDbTransaction transaction, CancellationToken ct = default);
-    Task MettreAJourVersionAsync(long id, int nouvelleVersion, string? idNoeudCourant, IDbTransaction transaction, CancellationToken ct = default);
-    Task<bool> ExisteProcessusActifAsync(string cleDefinition, long aggregateId, IDbTransaction transaction, CancellationToken ct = default);
+    Task<long> CreerAsync(InstanceProcessus instance, CancellationToken ct = default);
+    Task<InstanceProcessus?> ObtenirParIdAsync(long id, CancellationToken ct = default);
+    Task<InstanceProcessus?> ObtenirActiveParAggregateAsync(string cleDefinition, long aggregateId, CancellationToken ct = default);
+    Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(long idParent, CancellationToken ct = default);
+    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(string nomVariable, string valeurSerialisee, CancellationToken ct = default);
+    Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(CancellationToken ct = default);
+    Task MettreAJourStatutAsync(long id, StatutInstance statut, string? idNoeudCourant, DateTime? dateFin, CancellationToken ct = default);
+    Task MettreAJourVersionAsync(long id, int nouvelleVersion, string? idNoeudCourant, CancellationToken ct = default);
+    Task<bool> ExisteProcessusActifAsync(string cleDefinition, long aggregateId, CancellationToken ct = default);
     Task CreerTablesAsync(IDbConnection connection);
 }

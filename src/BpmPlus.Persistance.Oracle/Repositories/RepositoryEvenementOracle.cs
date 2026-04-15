@@ -7,14 +7,13 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenement
 {
-    public RepositoryEvenementOracle(string prefixe) : base(prefixe) { }
+    public RepositoryEvenementOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
-    public async Task AjouterAsync(
-        EvenementInstance evenement, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task AjouterAsync(EvenementInstance evenement, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             INSERT INTO {T("EVENEMENT_INSTANCE")}
                 (ID, ID_INSTANCE, TYPE_EVENEMENT, ID_NOEUD, NOM_NOEUD, HORODATAGE, DUREE_MS, RESULTAT, DETAIL)
             VALUES
@@ -31,31 +30,31 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
                 evenement.DureeMs,
                 Resultat = evenement.Resultat?.ToString(),
                 evenement.Detail
-            }, transaction);
+            }, Tx);
     }
 
     public async Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync(OraParam($"""
+        var rows = await Cn.QueryAsync(OraParam($"""
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = :IdInstance
             ORDER BY ID
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
 
         return rows.Select(MapperEvenement).ToList();
     }
 
     public async Task<EvenementInstance?> ObtenirDernierSuspensionAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = :IdInstance
               AND TYPE_EVENEMENT = 'NoeudSuspendu'
             ORDER BY ID DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
 
         return row is null ? null : MapperEvenement(row);
     }

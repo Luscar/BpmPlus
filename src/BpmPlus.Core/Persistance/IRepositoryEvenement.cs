@@ -5,8 +5,8 @@ namespace BpmPlus.Core.Persistance;
 
 public interface IRepositoryEvenement
 {
-    Task AjouterAsync(EvenementInstance evenement, IDbTransaction transaction, CancellationToken ct = default);
-    Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(long idInstance, IDbTransaction transaction, CancellationToken ct = default);
-    Task<EvenementInstance?> ObtenirDernierSuspensionAsync(long idInstance, IDbTransaction transaction, CancellationToken ct = default);
+    Task AjouterAsync(EvenementInstance evenement, CancellationToken ct = default);
+    Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(long idInstance, CancellationToken ct = default);
+    Task<EvenementInstance?> ObtenirDernierSuspensionAsync(long idInstance, CancellationToken ct = default);
     Task CreerTablesAsync(IDbConnection connection);
 }

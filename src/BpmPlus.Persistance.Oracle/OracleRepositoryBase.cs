@@ -1,5 +1,5 @@
 using System.Data;
-using Dapper;
+using BpmPlus.Abstractions;
 
 namespace BpmPlus.Persistance.Oracle;
 
@@ -9,17 +9,18 @@ namespace BpmPlus.Persistance.Oracle;
 public abstract class OracleRepositoryBase
 {
     protected readonly string Prefixe;
+    protected readonly IDbSession Session;
 
-    protected OracleRepositoryBase(string prefixe)
+    protected OracleRepositoryBase(IDbSession session, string prefixe)
     {
+        Session = session;
         Prefixe = prefixe.TrimEnd('_').ToUpperInvariant();
     }
 
     protected string T(string nomTable) => $"{Prefixe}_{nomTable}";
 
-    protected IDbConnection Cn(IDbTransaction transaction)
-        => transaction.Connection
-           ?? throw new InvalidOperationException("La transaction ne possède pas de connexion active.");
+    protected IDbConnection Cn => Session.Connection;
+    protected IDbTransaction? Tx => Session.Transaction;
 
     /// <summary>Convertit un paramètre nommé @param en :param (convention Oracle).</summary>
     protected static string OraParam(string sql) => sql.Replace("@", ":");

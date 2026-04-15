@@ -1,4 +1,3 @@
-using System.Data;
 using BpmPlus.Abstractions;
 using BpmPlus.Core.Execution.Executeurs;
 using BpmPlus.Core.Persistance;
@@ -88,7 +87,7 @@ public class MoteurExecution
 
             var debut = DateTime.UtcNow;
             await EnregistrerEvenementAsync(
-                instance.Id, TypeEvenement.EntreeNoeud, noeud, null, null, contexte.Transaction, ct);
+                instance.Id, TypeEvenement.EntreeNoeud, noeud, null, null, ct);
 
             ResultatNoeud resultat;
             try
@@ -100,7 +99,7 @@ public class MoteurExecution
                 _logger.LogError(ex, "Instance {Id} — erreur nœud '{NoeudId}'", instance.Id, noeud.Id);
                 await EnregistrerEvenementAsync(
                     instance.Id, TypeEvenement.ErreurNoeud, noeud,
-                    ResultatEvenement.Erreur, ex.Message, contexte.Transaction, ct);
+                    ResultatEvenement.Erreur, ex.Message, ct);
                 throw;
             }
 
@@ -111,16 +110,15 @@ public class MoteurExecution
                 case TypeResultatNoeud.Suivant:
                     await EnregistrerEvenementAsync(
                         instance.Id, TypeEvenement.SortieNoeud, noeud,
-                        ResultatEvenement.Succes, null, contexte.Transaction, ct, dureeMs);
+                        ResultatEvenement.Succes, null, ct, dureeMs);
                     noeudCourantId = resultat.NoeudSuivantId;
                     break;
 
                 case TypeResultatNoeud.Suspendu:
                     await EnregistrerEvenementAsync(
                         instance.Id, TypeEvenement.NoeudSuspendu, noeud,
-                        ResultatEvenement.Suspendu, resultat.Detail, contexte.Transaction, ct, dureeMs);
+                        ResultatEvenement.Suspendu, resultat.Detail, ct, dureeMs);
 
-                    // Persister l'état au point de suspension
                     await PersisterEtatAsync(instance, noeud.Id, StatutInstance.Suspendue,
                         null, contexte, ct);
 
@@ -131,12 +129,11 @@ public class MoteurExecution
                 case TypeResultatNoeud.Termine:
                     await EnregistrerEvenementAsync(
                         instance.Id, TypeEvenement.SortieNoeud, noeud,
-                        ResultatEvenement.Succes, null, contexte.Transaction, ct, dureeMs);
+                        ResultatEvenement.Succes, null, ct, dureeMs);
                     await EnregistrerEvenementAsync(
                         instance.Id, TypeEvenement.FinProcessus, noeud,
-                        ResultatEvenement.Succes, null, contexte.Transaction, ct);
+                        ResultatEvenement.Succes, null, ct);
 
-                    // Persister la fin
                     await PersisterEtatAsync(instance, noeud.Id, StatutInstance.Terminee,
                         DateTime.UtcNow, contexte, ct);
 
@@ -146,7 +143,6 @@ public class MoteurExecution
             }
         }
 
-        // Fin de flux sans nœud finale explicite (ne devrait pas arriver dans un processus bien défini)
         _logger.LogWarning("Instance {Id} — fin de flux sans nœud EstFinale.", instance.Id);
         await PersisterEtatAsync(instance, null, StatutInstance.Terminee, DateTime.UtcNow, contexte, ct);
         return TypeResultatExecution.Termine;
@@ -164,7 +160,7 @@ public class MoteurExecution
             NoeudInteractif ni => await _executeurInteractif.EntrerAsync(ni, instance, contexte, ct),
             NoeudDecision nd => await _executeurDecision.ExecuterAsync(nd, contexte, ct),
             NoeudAttenteTemps nat => await _executeurAttenteTemps.EntrerAsync(nat, contexte, ct),
-            NoeudAttenteSignal nas => await _executeurAttenteSignal.EntrerAsync(nas, instance.Id, contexte.Transaction, ct),
+            NoeudAttenteSignal nas => await _executeurAttenteSignal.EntrerAsync(nas, instance.Id, ct),
             NoeudSousProcessus nsp => await _executeurSousProcessus.Value.ExecuterAsync(nsp, instance, contexte, ct),
             _ => throw new InvalidOperationException($"Type de nœud non supporté : {noeud.GetType().Name}")
         };
@@ -178,15 +174,14 @@ public class MoteurExecution
         ContexteExecution contexte,
         CancellationToken ct)
     {
-        // Persister les variables si modifiées
         if (contexte.Variables is AccesseurVariables acc && acc.EstModifie)
         {
             await _repoVariable.SauvegarderToutesAsync(
-                instance.Id, contexte.Variables.ObtenirToutes(), contexte.Transaction, ct);
+                instance.Id, contexte.Variables.ObtenirToutes(), ct);
         }
 
         await _repoInstance.MettreAJourStatutAsync(
-            instance.Id, statut, idNoeudCourant, dateFin, contexte.Transaction, ct);
+            instance.Id, statut, idNoeudCourant, dateFin, ct);
 
         instance.Statut = statut;
         instance.IdNoeudCourant = idNoeudCourant;
@@ -199,7 +194,6 @@ public class MoteurExecution
         NoeudProcessus noeud,
         ResultatEvenement? resultat,
         string? detail,
-        IDbTransaction transaction,
         CancellationToken ct,
         long? dureeMs = null)
     {
@@ -214,7 +208,7 @@ public class MoteurExecution
             Resultat = resultat,
             Detail = detail
         };
-        await _repoEvenement.AjouterAsync(evt, transaction, ct);
+        await _repoEvenement.AjouterAsync(evt, ct);
     }
 
     public async Task EnregistrerEvenementSimpleAsync(
@@ -224,7 +218,6 @@ public class MoteurExecution
         string? nomNoeud,
         ResultatEvenement? resultat,
         string? detail,
-        IDbTransaction transaction,
         CancellationToken ct)
     {
         var evt = new EvenementInstance
@@ -237,6 +230,6 @@ public class MoteurExecution
             Resultat = resultat,
             Detail = detail
         };
-        await _repoEvenement.AjouterAsync(evt, transaction, ct);
+        await _repoEvenement.AjouterAsync(evt, ct);
     }
 }

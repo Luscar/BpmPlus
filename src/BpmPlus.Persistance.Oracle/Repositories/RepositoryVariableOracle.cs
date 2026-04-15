@@ -1,4 +1,5 @@
 using System.Data;
+using BpmPlus.Abstractions;
 using BpmPlus.Core.Persistance;
 using Dapper;
 
@@ -6,36 +7,35 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariable
 {
-    public RepositoryVariableOracle(string prefixe) : base(prefixe) { }
+    public RepositoryVariableOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
     public async Task SauvegarderToutesAsync(
-        long idInstance, IReadOnlyDictionary<string, object?> variables,
-        IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, IReadOnlyDictionary<string, object?> variables, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
 
         foreach (var (nom, valeur) in variables)
         {
             var (type, valeurStr) = SerialiserValeur(valeur);
-            await Cn(transaction).ExecuteAsync(OraParam($"""
+            await Cn.ExecuteAsync(OraParam($"""
                 INSERT INTO {T("VARIABLE_PROCESSUS")} (ID, ID_INSTANCE, NOM, TYPE, VALEUR)
                 VALUES ({T("SEQ_VARIABLE")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
                 """),
                 new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
-                transaction);
+                Tx);
         }
     }
 
     public async Task<Dictionary<string, object?>> ChargerToutesAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync(OraParam($"""
+        var rows = await Cn.QueryAsync(OraParam($"""
             SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
@@ -45,13 +45,11 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
     }
 
     public async Task MettreAJourAsync(
-        long idInstance, string nom, object? valeur,
-        IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, string nom, object? valeur, CancellationToken ct = default)
     {
         var (type, valeurStr) = SerialiserValeur(valeur);
 
-        // Oracle MERGE pour upsert
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             MERGE INTO {T("VARIABLE_PROCESSUS")} tgt
             USING (SELECT :IdInstance AS ID_INSTANCE, :Nom AS NOM FROM DUAL) src
             ON (tgt.ID_INSTANCE = src.ID_INSTANCE AND tgt.NOM = src.NOM)
@@ -62,7 +60,7 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
                 VALUES ({T("SEQ_VARIABLE")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
             """),
             new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
-            transaction);
+            Tx);
     }
 
     private static (string type, string valeur) SerialiserValeur(object? valeur)

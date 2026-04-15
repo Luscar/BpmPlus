@@ -4,7 +4,7 @@ namespace BpmPlus.Abstractions;
 
 /// <summary>
 /// Contexte fourni à chaque handler lors de l'exécution d'un nœud.
-/// Donne accès à la transaction active, aux variables et aux informations de l'instance.
+/// Donne accès à la session de base de données, aux variables et aux informations de l'instance.
 /// </summary>
 public interface IContexteExecution
 {
@@ -14,9 +14,14 @@ public interface IContexteExecution
     long? AggregateId { get; }
 
     /// <summary>
-    /// Transaction de base de données active. Fournie par l'application cliente.
+    /// Session de base de données active (connexion + transaction). Fournie par l'application cliente.
     /// </summary>
-    IDbTransaction Transaction { get; }
+    IDbSession Session { get; }
+
+    /// <summary>
+    /// Transaction de base de données active. Raccourci vers Session.Transaction.
+    /// </summary>
+    IDbTransaction? Transaction { get; }
 
     /// <summary>
     /// Accès en lecture et en écriture aux variables scalaires de l'instance.

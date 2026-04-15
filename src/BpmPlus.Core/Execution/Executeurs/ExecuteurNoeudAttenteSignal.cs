@@ -20,13 +20,12 @@ public class ExecuteurNoeudAttenteSignal
     public async Task<ResultatNoeud> EntrerAsync(
         NoeudAttenteSignal noeud,
         long idInstance,
-        System.Data.IDbTransaction transaction,
         CancellationToken ct)
     {
         _logger.LogInformation("NoeudAttenteSignal '{Id}' — attente signal '{Signal}'",
             noeud.Id, noeud.NomSignal);
 
-        await _repoSignal.AjouterAsync(idInstance, noeud.NomSignal, transaction, ct);
+        await _repoSignal.AjouterAsync(idInstance, noeud.NomSignal, ct);
 
         var detail = System.Text.Json.JsonSerializer.Serialize(new
         {
@@ -41,11 +40,10 @@ public class ExecuteurNoeudAttenteSignal
     public async Task<ResultatNoeud> ReprendreAsync(
         NoeudAttenteSignal noeud,
         long idInstance,
-        System.Data.IDbTransaction transaction,
         CancellationToken ct)
     {
         _logger.LogInformation("NoeudAttenteSignal '{Id}' — signal reçu, reprise", noeud.Id);
-        await _repoSignal.SupprimerParInstanceAsync(idInstance, transaction, ct);
+        await _repoSignal.SupprimerParInstanceAsync(idInstance, ct);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
