@@ -207,49 +207,50 @@ Deux approches sont disponibles : **Fluent C#** (recommandée pour les définiti
 
 ### 5.1 Approche Fluent C#
 
+Le nom du nœud peut être passé directement en deuxième argument de `Ajouter*`, et les attributs courants se combinent en un seul appel :
+
 ```csharp
 var definition = new DefinitionProcessusBuilder("approbation-commande")
     .Nommer("Processus d'approbation de commande")
     .Debuter("valider-commande")
 
-    // Nœud métier : exécute ValiderCommande, puis passe à approbation-responsable
-    .AjouterNoeudMetier("valider-commande", n => n
-        .Nommer("Valider la commande")
-        .CommandeNommee("ValiderCommande")
-        .AggregateIdDepuisVariable("commandeId")
+    // Nom en 2e argument — CommandeNommee(commande, aggregateIdVariable) en un appel
+    .AjouterNoeudMetier("valider-commande", "Valider la commande", n => n
+        .CommandeNommee("ValiderCommande", "commandeId")
         .Vers("approbation-responsable"))
 
-    // Nœud interactif : suspend et crée une tâche humaine
-    .AjouterNoeudInteractif("approbation-responsable", n => n
-        .Nommer("Approbation responsable")
-        .DefinirTache(t => t
-            .Titre("Approuver la commande")
-            .Description("Veuillez approuver ou refuser la commande"))
-        .AvecCommandePost("EnregistrerDecision",
-            p => p.AggregateIdDepuisVariable("commandeId"))
+    // DefinirTache(titre, description) sans sous-builder
+    // AvecCommandePost(commande, aggregateIdVariable) en un appel
+    .AjouterNoeudInteractif("approbation-responsable", "Approbation responsable", n => n
+        .DefinirTache("Approuver la commande", "Veuillez approuver ou refuser la commande")
+        .AvecCommandePost("EnregistrerDecision", "commandeId")
         .Vers("decision-approbation"))
 
-    // Nœud décision (XOR) : évalue les conditions dans l'ordre
-    .AjouterNoeudDecision("decision-approbation", n => n
-        .Nommer("Décision d'approbation")
+    .AjouterNoeudDecision("decision-approbation", "Décision d'approbation", n => n
         .SiVariable("statut", Operateur.Egal, "Approuvee").Vers("notification-approbation")
         .ParDefaut().Vers("notification-refus"))
 
-    // Nœuds finaux
-    .AjouterNoeudMetier("notification-approbation", n => n
-        .Nommer("Notifier approbation")
-        .CommandeNommee("NotifierApprobation")
-        .AggregateIdDepuisVariable("commandeId")
+    .AjouterNoeudMetier("notification-approbation", "Notifier approbation", n => n
+        .CommandeNommee("NotifierApprobation", "commandeId")
         .EstFinale())
 
-    .AjouterNoeudMetier("notification-refus", n => n
-        .Nommer("Notifier refus")
-        .CommandeNommee("NotifierRefus")
-        .AggregateIdDepuisVariable("commandeId")
+    .AjouterNoeudMetier("notification-refus", "Notifier refus", n => n
+        .CommandeNommee("NotifierRefus", "commandeId")
         .EstFinale())
 
     .Construire();
 ```
+
+**Récapitulatif des raccourcis disponibles :**
+
+| Avant | Après |
+|-------|-------|
+| `AjouterNoeudMetier("id", n => n.Nommer("X")...)` | `AjouterNoeudMetier("id", "X", n => n...)` |
+| `.CommandeNommee("X").AggregateIdDepuisVariable("y")` | `.CommandeNommee("X", "y")` |
+| `.DefinirTache(t => t.Titre("X").Description("Y"))` | `.DefinirTache("X", "Y")` |
+| `.AvecCommandePre("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePre("X", "y")` |
+| `.AvecCommandePost("X", p => p.AggregateIdDepuisVariable("y"))` | `.AvecCommandePost("X", "y")` |
+| `.SortieVariable("a").SortieVariable("b").SortieVariable("c")` | `.SortiesVariables("a", "b", "c")` |
 
 ### 5.2 Approche JSON
 
