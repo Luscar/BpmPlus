@@ -255,11 +255,17 @@ var definition = new DefinitionProcessusBuilder("approbation-commande")
 ### 5.1.1 Nœud attente de temps
 
 ```csharp
+// Échéance depuis une variable
 .AjouterNoeudAttenteTemps("attente-relance", "Attente avant relance", n => n
-    .EcheanceDepuisVariable("dateRelance")   // date stockée dans une variable
-    // OU .EcheanceStatique(DateTime.UtcNow.AddDays(7))
-    // OU .EcheanceDepuisQuery("CalculerDateRelance")
+    .EcheanceDepuisVariable("dateRelance")
     .Vers("envoyer-relance"))
+
+// Échéance calculée par une query, avec paramètres
+.AjouterNoeudAttenteTemps("attente-validation", "Attente validation", n => n
+    .EcheanceDepuisQuery("CalculerDelaiValidation", "commandeId")
+    .ParametreQueryStatique("delaiJours", 7)
+    .ParametreQueryDepuisVariable("priorite", "prioriteCommande")
+    .Vers("valider"))
 ```
 
 ### 5.1.2 Nœud attente de signal
@@ -665,6 +671,15 @@ catch (Exception ex)
 | `.ParametreDepuisVariable("nomParam", "nomVar")` | Paramètre résolu depuis une variable |
 | `.ParametreStatique("nomParam", valeur)` | Paramètre à valeur fixe |
 
+**`DefinitionCommande` (PRE/POST d'un `NoeudInteractif`) — via `CommandeBuilder` :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.AvecCommandePre("X", "varId")` | Raccourci aggregate id depuis une variable |
+| `.AvecCommandePre("X", p => p.ParametreDepuisVariable("n", "v"))` | Paramètre depuis variable |
+| `.AvecCommandePre("X", p => p.ParametreStatique("n", val))` | Paramètre statique |
+| *(idem pour `.AvecCommandePost`)* | |
+
 **`NoeudAttenteTemps` — date d'échéance :**
 
 | Méthode | Description |
@@ -672,6 +687,9 @@ catch (Exception ex)
 | `.EcheanceDepuisVariable("nomVar")` | Date lue depuis une variable (`DateTime`) |
 | `.EcheanceStatique(date)` | Date fixe dans la définition |
 | `.EcheanceDepuisQuery("NomQuery")` | Date calculée par un `IHandlerQuery<DateTime>` |
+| `.EcheanceDepuisQuery("NomQuery", "varId")` | Idem avec aggregate id depuis une variable |
+| `.ParametreQueryDepuisVariable("nomParam", "nomVar")` | Paramètre query depuis une variable |
+| `.ParametreQueryStatique("nomParam", valeur)` | Paramètre query à valeur fixe |
 
 **`NoeudDecision` — conditions :**
 
@@ -679,6 +697,9 @@ catch (Exception ex)
 |---------|-------------|
 | `.SiVariable("nomVar", Operateur.X, valeur)` | Condition sur une variable du processus |
 | `.SiQuery("NomQuery")` | Condition évaluée par un `IHandlerQuery<bool>` |
+| `.SiQuery("NomQuery", "varId")` | Idem avec aggregate id depuis une variable |
+| `.ParametreQueryDepuisVariable("nomParam", "nomVar")` | Paramètre query depuis une variable |
+| `.ParametreQueryStatique("nomParam", valeur)` | Paramètre query à valeur fixe |
 | `.ParDefaut()` | Branche de repli si aucune condition n'est vraie |
 
 ### Opérateurs de condition (`ConditionVariable`)

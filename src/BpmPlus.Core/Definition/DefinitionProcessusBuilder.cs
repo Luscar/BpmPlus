@@ -330,6 +330,17 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
         return new FluxSortantBuilder(this, flux);
     }
 
+    /// <summary>Condition query avec aggregate id depuis une variable — paramètres ajoutables via ParametreQuery*.</summary>
+    public FluxSortantBuilder SiQuery(string nomQuery, string aggregateIdVariable)
+    {
+        var flux = new FluxSortant
+        {
+            Condition = new ConditionQuery(nomQuery, new SourceVariable(aggregateIdVariable))
+        };
+        _fluxSortants.Add(flux);
+        return new FluxSortantBuilder(this, flux);
+    }
+
     public FluxSortantBuilder ParDefaut()
     {
         var flux = new FluxSortant { EstParDefaut = true };
@@ -358,10 +369,40 @@ public class FluxSortantBuilder
         _flux = flux;
     }
 
+    /// <summary>Ajoute un paramètre (depuis une variable) à la ConditionQuery de ce flux.</summary>
+    public FluxSortantBuilder ParametreQueryDepuisVariable(string nomParam, string nomVariable)
+    {
+        EnsureConditionQuery().Parametres![nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre statique à la ConditionQuery de ce flux.</summary>
+    public FluxSortantBuilder ParametreQueryStatique(string nomParam, object? valeur)
+    {
+        EnsureConditionQuery().Parametres![nomParam] = new SourceValeurStatique(valeur);
+        return this;
+    }
+
     public NoeudDecisionBuilder Vers(string idNoeudSuivant)
     {
         _flux.Vers = idNoeudSuivant;
         return _parent;
+    }
+
+    private ConditionQuery EnsureConditionQuery()
+    {
+        if (_flux.Condition is not ConditionQuery cq)
+            throw new InvalidOperationException(
+                "ParametreQuery* n'est disponible que sur un flux créé avec SiQuery().");
+
+        if (cq.Parametres is null)
+        {
+            var avecParametres = cq with { Parametres = new Dictionary<string, ISourceParametre>() };
+            _flux.Condition = avecParametres;
+            return avecParametres;
+        }
+
+        return cq;
     }
 }
 
@@ -386,7 +427,28 @@ public class NoeudAttenteTempsBuilder : NoeudBaseBuilder<NoeudAttenteTempsBuilde
     public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery,
         ISourceParametre? sourceAggregateId = null)
     {
-        _sourceDate = new SourceQuery(nomQuery, sourceAggregateId);
+        _sourceDate = new SourceQuery(nomQuery, sourceAggregateId, new Dictionary<string, ISourceParametre>());
+        return this;
+    }
+
+    /// <summary>Échéance via query avec aggregate id depuis une variable.</summary>
+    public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery, string aggregateIdVariable)
+    {
+        _sourceDate = new SourceQuery(nomQuery, new SourceVariable(aggregateIdVariable), new Dictionary<string, ISourceParametre>());
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre (depuis une variable) à la query d'échéance. Appeler après EcheanceDepuisQuery.</summary>
+    public NoeudAttenteTempsBuilder ParametreQueryDepuisVariable(string nomParam, string nomVariable)
+    {
+        ((SourceQuery)_sourceDate).Parametres![nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre statique à la query d'échéance. Appeler après EcheanceDepuisQuery.</summary>
+    public NoeudAttenteTempsBuilder ParametreQueryStatique(string nomParam, object? valeur)
+    {
+        ((SourceQuery)_sourceDate).Parametres![nomParam] = new SourceValeurStatique(valeur);
         return this;
     }
 
@@ -494,6 +556,12 @@ public class CommandeBuilder
     public CommandeBuilder ParametreDepuisVariable(string nomParam, string nomVariable)
     {
         _parametres[nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    public CommandeBuilder ParametreStatique(string nomParam, object? valeur)
+    {
+        _parametres[nomParam] = new SourceValeurStatique(valeur);
         return this;
     }
 
