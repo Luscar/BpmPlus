@@ -238,7 +238,8 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
     public NoeudMetierBuilder(string id) : base(id) { }
 
     /// <summary>
-    /// Surcharge le nom de commande (par défaut : id du nœud + "Command", ex. "creer-dossierCommand").
+    /// Surcharge le nom de commande (par défaut : PascalCase(id) + "Command",
+    /// ex. "creer-dossier" → "CreerDossierCommand").
     /// À utiliser uniquement si la commande diffère de cette convention.
     /// </summary>
     public NoeudMetierBuilder CommandeNommee(string nomCommande)
@@ -260,7 +261,7 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
     }
 
     /// <summary>
-    /// Construit le NoeudMetier. Le nom de commande vaut l'id du nœud si non surchargé via CommandeNommee().
+    /// Construit le NoeudMetier. Le NomCommande par défaut est PascalCase(id) + "Command".
     /// </summary>
     public override NoeudMetier Construire() => new()
     {
@@ -268,9 +269,20 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
         Nom = _nom,
         EstFinale = _estFinale,
         FluxSortants = _fluxSortants,
-        NomCommande = string.IsNullOrEmpty(_nomCommande) ? _id + "Command" : _nomCommande,
+        NomCommande = string.IsNullOrEmpty(_nomCommande) ? NomCommandeParDefaut(_id) : _nomCommande,
         Parametres = _parametres
     };
+
+    /// <summary>
+    /// Convertit un id kebab-case ou snake_case en PascalCase et ajoute le suffixe "Command".
+    /// "creer-dossier" → "CreerDossierCommand", "valider_kyc" → "ValiderKycCommand".
+    /// </summary>
+    internal static string NomCommandeParDefaut(string id)
+    {
+        var parts = id.Split(['-', '_', ' '], StringSplitOptions.RemoveEmptyEntries);
+        var pascal = string.Concat(parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+        return pascal + "Command";
+    }
 }
 
 public class NoeudInteractifBuilder : NoeudBaseBuilder<NoeudInteractifBuilder, NoeudInteractif>
