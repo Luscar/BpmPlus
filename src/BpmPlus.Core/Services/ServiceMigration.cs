@@ -1,4 +1,3 @@
-using System.Data;
 using BpmPlus.Abstractions;
 using BpmPlus.Core.Persistance;
 using Microsoft.Extensions.Logging;
@@ -27,13 +26,12 @@ public class ServiceMigration : IServiceMigration
     public async Task<ResultatMigration> MigrerAsync(
         long idInstance,
         int versionCible,
-        IDbTransaction transaction,
         IReadOnlyDictionary<string, string>? mappingNoeuds = null,
         CancellationToken ct = default)
     {
         _logger.LogInformation("Migration instance {Id} → version {Version}", idInstance, versionCible);
 
-        var instance = await _repoInstance.ObtenirParIdAsync(idInstance, transaction, ct)
+        var instance = await _repoInstance.ObtenirParIdAsync(idInstance, ct)
             ?? throw new KeyNotFoundException($"Instance {idInstance} introuvable.");
 
         if (instance.Statut != StatutInstance.Active && instance.Statut != StatutInstance.Suspendue)
@@ -49,7 +47,7 @@ public class ServiceMigration : IServiceMigration
         try
         {
             definitionCible = await _repoDefinition.ObtenirVersionPublieeAsync(
-                instance.CleDefinition, versionCible, transaction, ct)
+                instance.CleDefinition, versionCible, ct)
                 ?? throw new DefinitionIntrouvableException(instance.CleDefinition, versionCible);
         }
         catch (Exception ex)
@@ -60,7 +58,6 @@ public class ServiceMigration : IServiceMigration
                 instance.IdNoeudCourant, null, ex.Message);
         }
 
-        // Résoudre le nœud courant dans la nouvelle version
         var ancienNoeudId = instance.IdNoeudCourant;
         string? nouveauNoeudId = ancienNoeudId;
 
@@ -68,7 +65,6 @@ public class ServiceMigration : IServiceMigration
         {
             if (definitionCible.TrouverNoeud(ancienNoeudId) is not null)
             {
-                // Le nœud existe tel quel dans la nouvelle version
                 nouveauNoeudId = ancienNoeudId;
             }
             else if (mappingNoeuds is not null && mappingNoeuds.TryGetValue(ancienNoeudId, out var mapped))
@@ -92,10 +88,8 @@ public class ServiceMigration : IServiceMigration
             }
         }
 
-        // Mettre à jour l'instance
-        await _repoInstance.MettreAJourVersionAsync(idInstance, versionCible, nouveauNoeudId, transaction, ct);
+        await _repoInstance.MettreAJourVersionAsync(idInstance, versionCible, nouveauNoeudId, ct);
 
-        // Enregistrer l'événement de migration
         var detail = System.Text.Json.JsonSerializer.Serialize(new
         {
             ancienneVersion = instance.VersionDefinition,
@@ -112,7 +106,7 @@ public class ServiceMigration : IServiceMigration
             Horodatage = DateTime.UtcNow,
             Resultat = ResultatEvenement.Succes,
             Detail = detail
-        }, transaction, ct);
+        }, ct);
 
         _logger.LogInformation(
             "Migration réussie — instance {Id} : v{AncV}@{AncN} → v{NvV}@{NvN}",
@@ -126,15 +120,13 @@ public class ServiceMigration : IServiceMigration
     public async Task<IReadOnlyList<ResultatMigration>> MigrerToutesAsync(
         string cleDefinition,
         int versionCible,
-        IDbTransaction transaction,
         IReadOnlyDictionary<string, string>? mappingNoeuds = null,
         CancellationToken ct = default)
     {
         _logger.LogInformation("Migration de toutes les instances '{Cle}' → version {Version}",
             cleDefinition, versionCible);
 
-        // Récupérer toutes les instances actives/suspendues pour cette définition
-        var suspendues = await _repoInstance.ObtenirSuspenduesAsync(transaction, ct);
+        var suspendues = await _repoInstance.ObtenirSuspenduesAsync(ct);
         var instances = suspendues.Where(i =>
             i.CleDefinition == cleDefinition &&
             (i.Statut == StatutInstance.Active || i.Statut == StatutInstance.Suspendue))
@@ -145,7 +137,7 @@ public class ServiceMigration : IServiceMigration
         {
             try
             {
-                var resultat = await MigrerAsync(instance.Id, versionCible, transaction, mappingNoeuds, ct);
+                var resultat = await MigrerAsync(instance.Id, versionCible, mappingNoeuds, ct);
                 resultats.Add(resultat);
             }
             catch (Exception ex)

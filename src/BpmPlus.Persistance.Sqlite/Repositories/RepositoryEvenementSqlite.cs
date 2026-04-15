@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenement
 {
-    public RepositoryEvenementSqlite(string prefixe) : base(prefixe) { }
+    public RepositoryEvenementSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -26,10 +26,9 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
             """);
     }
 
-    public async Task AjouterAsync(
-        EvenementInstance evenement, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task AjouterAsync(EvenementInstance evenement, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync($"""
+        await Cn.ExecuteAsync($"""
             INSERT INTO {T("EVENEMENT_INSTANCE")}
                 (ID_INSTANCE, TYPE_EVENEMENT, ID_NOEUD, NOM_NOEUD, HORODATAGE, DUREE_MS, RESULTAT, DETAIL)
             VALUES
@@ -45,30 +44,30 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
                 evenement.DureeMs,
                 Resultat = evenement.Resultat?.ToString(),
                 evenement.Detail
-            }, transaction);
+            }, Tx);
     }
 
     public async Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync($"""
+        var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = @IdInstance
             ORDER BY ID
-            """, new { IdInstance = idInstance }, transaction);
+            """, new { IdInstance = idInstance }, Tx);
 
         return rows.Select(MapperEvenement).ToList();
     }
 
     public async Task<EvenementInstance?> ObtenirDernierSuspensionAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync($"""
+        var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = @IdInstance
               AND TYPE_EVENEMENT = 'NoeudSuspendu'
             ORDER BY ID DESC LIMIT 1
-            """, new { IdInstance = idInstance }, transaction);
+            """, new { IdInstance = idInstance }, Tx);
 
         return row is null ? null : MapperEvenement(row);
     }

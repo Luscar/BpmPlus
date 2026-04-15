@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefinition
 {
-    public RepositoryDefinitionSqlite(string prefixe) : base(prefixe) { }
+    public RepositoryDefinitionSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -27,16 +27,14 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
             """);
     }
 
-    public async Task<long> SauvegarderAsync(
-        DefinitionProcessus definition, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<long> SauvegarderAsync(DefinitionProcessus definition, CancellationToken ct = default)
     {
         var json = JsonDefinitionParser.Serialiser(definition);
         var maintenant = DateTime.UtcNow.ToString("O");
 
         if (definition.Id.HasValue)
         {
-            // Mise à jour du brouillon existant
-            await Cn(transaction).ExecuteAsync($"""
+            await Cn.ExecuteAsync($"""
                 UPDATE {T("DEFINITION_PROCESSUS")}
                 SET NOM = @Nom,
                     DEFINITION_JSON = @Json,
@@ -44,80 +42,76 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
                 WHERE ID = @Id
                 """,
                 new { definition.Nom, Json = json, DateCreation = maintenant, definition.Id },
-                transaction);
+                Tx);
             return definition.Id.Value;
         }
 
-        // Calculer la prochaine version
-        var derniereVersion = await Cn(transaction).QuerySingleOrDefaultAsync<int?>($"""
+        var derniereVersion = await Cn.QuerySingleOrDefaultAsync<int?>($"""
             SELECT MAX(VERSION) FROM {T("DEFINITION_PROCESSUS")} WHERE CLE = @Cle
-            """, new { definition.Cle }, transaction) ?? 0;
+            """, new { definition.Cle }, Tx) ?? 0;
 
         var nouvelleVersion = derniereVersion + 1;
 
-        var id = await Cn(transaction).QuerySingleAsync<long>($"""
+        var id = await Cn.QuerySingleAsync<long>($"""
             INSERT INTO {T("DEFINITION_PROCESSUS")} (CLE, VERSION, NOM, STATUT, DEFINITION_JSON, DATE_CREATION)
             VALUES (@Cle, @Version, @Nom, 'Brouillon', @Json, @DateCreation);
             SELECT last_insert_rowid()
             """,
             new { definition.Cle, Version = nouvelleVersion, definition.Nom, Json = json, DateCreation = maintenant },
-            transaction);
+            Tx);
 
         return id;
     }
 
-    public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(string cle, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync($"""
+        var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND STATUT = 'Brouillon'
             ORDER BY VERSION DESC LIMIT 1
-            """, new { Cle = cle }, transaction);
+            """, new { Cle = cle }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
     public async Task<DefinitionProcessus?> ObtenirVersionPublieeAsync(
-        string cle, int version, IDbTransaction transaction, CancellationToken ct = default)
+        string cle, int version, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync($"""
+        var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND VERSION = @Version AND STATUT = 'Publiee'
-            """, new { Cle = cle, Version = version }, transaction);
+            """, new { Cle = cle, Version = version }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
     public async Task<DefinitionProcessus?> ObtenirDerniereVersionPublieeAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+        string cle, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync($"""
+        var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND STATUT = 'Publiee'
             ORDER BY VERSION DESC LIMIT 1
-            """, new { Cle = cle }, transaction);
+            """, new { Cle = cle }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
-    public async Task PublierAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task PublierAsync(string cle, CancellationToken ct = default)
     {
         var maintenant = DateTime.UtcNow.ToString("O");
-        await Cn(transaction).ExecuteAsync($"""
+        await Cn.ExecuteAsync($"""
             UPDATE {T("DEFINITION_PROCESSUS")}
             SET STATUT = 'Publiee', DATE_PUBLICATION = @DatePublication
             WHERE CLE = @Cle AND STATUT = 'Brouillon'
-            """, new { Cle = cle, DatePublication = maintenant }, transaction);
+            """, new { Cle = cle, DatePublication = maintenant }, Tx);
     }
 
-    public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(
-        IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync($"""
+        var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
-            """, transaction: transaction);
+            """, transaction: Tx);
 
         return rows.Select(r => MapperDefinition(r)).ToList();
     }

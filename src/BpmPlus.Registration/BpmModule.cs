@@ -72,6 +72,7 @@ public class BpmModule : Autofac.Module
         {
             var scope = ctx.Resolve<ILifetimeScope>();
             return new ExecuteurNoeudSousProcessus(
+                ctx.Resolve<IDbSession>(),
                 ctx.Resolve<IRepositoryDefinition>(),
                 ctx.Resolve<IRepositoryInstance>(),
                 ctx.Resolve<IRepositoryVariable>(),
@@ -98,29 +99,29 @@ public class BpmModule : Autofac.Module
         switch (_config.Backend)
         {
             case BackendPersistance.Sqlite:
-                builder.Register(_ => new RepositoryDefinitionSqlite(prefixe))
-                    .As<IRepositoryDefinition>().SingleInstance();
-                builder.Register(_ => new RepositoryInstanceSqlite(prefixe))
-                    .As<IRepositoryInstance>().SingleInstance();
-                builder.Register(_ => new RepositoryVariableSqlite(prefixe))
-                    .As<IRepositoryVariable>().SingleInstance();
-                builder.Register(_ => new RepositoryEvenementSqlite(prefixe))
-                    .As<IRepositoryEvenement>().SingleInstance();
-                builder.Register(_ => new RepositoryAttenteSignalSqlite(prefixe))
-                    .As<IRepositoryAttenteSignal>().SingleInstance();
+                builder.Register(ctx => new RepositoryDefinitionSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryDefinition>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryInstanceSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryInstance>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryVariableSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryVariable>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryEvenementSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryEvenement>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 break;
 
             case BackendPersistance.Oracle:
-                builder.Register(_ => new RepositoryDefinitionOracle(prefixe))
-                    .As<IRepositoryDefinition>().SingleInstance();
-                builder.Register(_ => new RepositoryInstanceOracle(prefixe))
-                    .As<IRepositoryInstance>().SingleInstance();
-                builder.Register(_ => new RepositoryVariableOracle(prefixe))
-                    .As<IRepositoryVariable>().SingleInstance();
-                builder.Register(_ => new RepositoryEvenementOracle(prefixe))
-                    .As<IRepositoryEvenement>().SingleInstance();
-                builder.Register(_ => new RepositoryAttenteSignalOracle(prefixe))
-                    .As<IRepositoryAttenteSignal>().SingleInstance();
+                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryDefinition>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryInstance>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryVariable>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryEvenement>().InstancePerLifetimeScope();
+                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbSession>(), prefixe))
+                    .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 break;
         }
     }
@@ -136,8 +137,6 @@ public class BpmModule : Autofac.Module
 
             foreach (var type in commandeTypes)
             {
-                // Instancier temporairement pour lire NomCommande
-                // Alternative : utiliser un attribut ou une convention de nommage
                 builder.RegisterType(type)
                     .As<IHandlerCommande>()
                     .Keyed<IHandlerCommande>(GetNomCommande(type))
@@ -156,13 +155,11 @@ public class BpmModule : Autofac.Module
                 var nomQuery = GetNomQuery(type);
                 if (nomQuery is null) continue;
 
-                // Enregistrer comme IHandlerQuery (base non-générique) pour la résolution par nom
                 builder.RegisterType(type)
                     .As<IHandlerQuery>()
                     .Keyed<IHandlerQuery>(nomQuery)
                     .InstancePerLifetimeScope();
 
-                // Enregistrer également pour chaque interface IHandlerQuery<T> implémentée
                 var queryInterfaces = type.GetInterfaces()
                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IHandlerQuery<>));
 
@@ -187,7 +184,6 @@ public class BpmModule : Autofac.Module
         }
         else
         {
-            // Enregistrer une implémentation nulle si non configurée
             builder.RegisterType<GestionTacheNulle>()
                 .As<IGestionTache>()
                 .InstancePerLifetimeScope();
@@ -196,20 +192,17 @@ public class BpmModule : Autofac.Module
 
     private static string? GetNomCommande(Type type)
     {
-        // Instancier pour lire NomCommande — nécessite un constructeur sans paramètre
-        // Alternative recommandée : attribut [NomCommande("...")] ou convention de nommage
         try
         {
             var prop = type.GetProperty("NomCommande");
             if (prop is null) return null;
 
-            // Chercher via méthode statique ou attribut en priorité
             var instance = Activator.CreateInstance(type);
             return instance is null ? null : (string?)prop.GetValue(instance);
         }
         catch
         {
-            return type.Name; // Fallback sur le nom de classe
+            return type.Name;
         }
     }
 

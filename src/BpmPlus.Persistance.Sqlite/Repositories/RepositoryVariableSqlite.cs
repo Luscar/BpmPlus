@@ -1,4 +1,5 @@
 using System.Data;
+using BpmPlus.Abstractions;
 using BpmPlus.Core.Persistance;
 using Dapper;
 
@@ -6,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariable
 {
-    public RepositoryVariableSqlite(string prefixe) : base(prefixe) { }
+    public RepositoryVariableSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -23,32 +24,30 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     }
 
     public async Task SauvegarderToutesAsync(
-        long idInstance, IReadOnlyDictionary<string, object?> variables,
-        IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, IReadOnlyDictionary<string, object?> variables, CancellationToken ct = default)
     {
-        // Supprimer puis réinsérer (stratégie simple)
-        await Cn(transaction).ExecuteAsync($"""
+        await Cn.ExecuteAsync($"""
             DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance }, transaction);
+            """, new { IdInstance = idInstance }, Tx);
 
         foreach (var (nom, valeur) in variables)
         {
             var (type, valeurStr) = SerialiserValeur(valeur);
-            await Cn(transaction).ExecuteAsync($"""
+            await Cn.ExecuteAsync($"""
                 INSERT INTO {T("VARIABLE_PROCESSUS")} (ID_INSTANCE, NOM, TYPE, VALEUR)
                 VALUES (@IdInstance, @Nom, @Type, @Valeur)
                 """,
                 new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
-                transaction);
+                Tx);
         }
     }
 
     public async Task<Dictionary<string, object?>> ChargerToutesAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync($"""
+        var rows = await Cn.QueryAsync($"""
             SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance }, transaction);
+            """, new { IdInstance = idInstance }, Tx);
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
@@ -58,18 +57,17 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     }
 
     public async Task MettreAJourAsync(
-        long idInstance, string nom, object? valeur,
-        IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, string nom, object? valeur, CancellationToken ct = default)
     {
         var (type, valeurStr) = SerialiserValeur(valeur);
-        await Cn(transaction).ExecuteAsync($"""
+        await Cn.ExecuteAsync($"""
             INSERT INTO {T("VARIABLE_PROCESSUS")} (ID_INSTANCE, NOM, TYPE, VALEUR)
             VALUES (@IdInstance, @Nom, @Type, @Valeur)
             ON CONFLICT(ID_INSTANCE, NOM) DO UPDATE
             SET TYPE = excluded.TYPE, VALEUR = excluded.VALEUR
             """,
             new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
-            transaction);
+            Tx);
     }
 
     private static (string type, string valeur) SerialiserValeur(object? valeur)

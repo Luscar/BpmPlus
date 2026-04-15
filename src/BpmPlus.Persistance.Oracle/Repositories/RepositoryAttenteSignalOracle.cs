@@ -1,4 +1,5 @@
 using System.Data;
+using BpmPlus.Abstractions;
 using BpmPlus.Core.Persistance;
 using Dapper;
 
@@ -6,45 +7,42 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAttenteSignal
 {
-    public RepositoryAttenteSignalOracle(string prefixe) : base(prefixe) { }
+    public RepositoryAttenteSignalOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
-    public async Task AjouterAsync(
-        long idInstance, string nomSignal,
-        IDbTransaction transaction, CancellationToken ct = default)
+    public async Task AjouterAsync(long idInstance, string nomSignal, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             INSERT INTO {T("ATTENTE_SIGNAL")} (ID, ID_INSTANCE, NOM_SIGNAL, DATE_CREATION)
             VALUES ({T("SEQ_SIGNAL")}.NEXTVAL, :IdInstance, :NomSignal, :DateCreation)
             """),
             new { IdInstance = idInstance, NomSignal = nomSignal, DateCreation = DateTime.UtcNow },
-            transaction);
+            Tx);
     }
 
-    public async Task SupprimerParInstanceAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task SupprimerParInstanceAsync(long idInstance, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             DELETE FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
     }
 
     public async Task<IReadOnlyList<long>> ObtenirInstancesEnAttenteAsync(
-        string nomSignal, IDbTransaction transaction, CancellationToken ct = default)
+        string nomSignal, CancellationToken ct = default)
     {
-        var ids = await Cn(transaction).QueryAsync<long>(OraParam($"""
+        var ids = await Cn.QueryAsync<long>(OraParam($"""
             SELECT ID_INSTANCE FROM {T("ATTENTE_SIGNAL")} WHERE NOM_SIGNAL = :NomSignal
-            """), new { NomSignal = nomSignal }, transaction);
+            """), new { NomSignal = nomSignal }, Tx);
         return ids.ToList();
     }
 
     public async Task<IReadOnlyList<string>> ObtenirSignauxParInstanceAsync(
-        long idInstance, IDbTransaction transaction, CancellationToken ct = default)
+        long idInstance, CancellationToken ct = default)
     {
-        var signaux = await Cn(transaction).QueryAsync<string>(OraParam($"""
+        var signaux = await Cn.QueryAsync<string>(OraParam($"""
             SELECT NOM_SIGNAL FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, transaction);
+            """), new { IdInstance = idInstance }, Tx);
         return signaux.ToList();
     }
 }

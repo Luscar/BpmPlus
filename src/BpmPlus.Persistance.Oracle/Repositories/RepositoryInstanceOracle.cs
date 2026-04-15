@@ -7,15 +7,14 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstance
 {
-    public RepositoryInstanceOracle(string prefixe) : base(prefixe) { }
+    public RepositoryInstanceOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
-    public async Task<long> CreerAsync(
-        InstanceProcessus instance, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<long> CreerAsync(InstanceProcessus instance, CancellationToken ct = default)
     {
         var maintenant = DateTime.UtcNow;
-        var id = await Cn(transaction).QuerySingleAsync<long>(OraParam($"""
+        var id = await Cn.QuerySingleAsync<long>(OraParam($"""
             INSERT INTO {T("INSTANCE_PROCESSUS")}
                 (ID, CLE_DEFINITION, VERSION_DEFINITION, AGGREGATE_ID, STATUT,
                  ID_NOEUD_COURANT, ID_INSTANCE_PARENT, DATE_DEBUT, DATE_FIN,
@@ -38,70 +37,66 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                 DateFin = instance.DateFin,
                 DateCreation = maintenant,
                 DateMaj = maintenant
-            }, transaction);
+            }, Tx);
 
         return id;
     }
 
-    public async Task<InstanceProcessus?> ObtenirParIdAsync(
-        long id, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<InstanceProcessus?> ObtenirParIdAsync(long id, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID = :Id
-            """), new { Id = id }, transaction);
+            """), new { Id = id }, Tx);
         return row is null ? null : MapperInstance(row);
     }
 
     public async Task<InstanceProcessus?> ObtenirActiveParAggregateAsync(
-        string cleDefinition, long aggregateId,
-        IDbTransaction transaction, CancellationToken ct = default)
+        string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")}
             WHERE CLE_DEFINITION = :Cle
               AND AGGREGATE_ID = :AggId
               AND STATUT != 'Terminee'
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cleDefinition, AggId = aggregateId }, transaction);
+            """), new { Cle = cleDefinition, AggId = aggregateId }, Tx);
         return row is null ? null : MapperInstance(row);
     }
 
     public async Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(
-        long idParent, IDbTransaction transaction, CancellationToken ct = default)
+        long idParent, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync(OraParam($"""
+        var rows = await Cn.QueryAsync(OraParam($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID_INSTANCE_PARENT = :IdParent
-            """), new { IdParent = idParent }, transaction);
+            """), new { IdParent = idParent }, Tx);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
     public async Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
-        string nomVariable, string valeurSerialisee,
-        IDbTransaction transaction, CancellationToken ct = default)
+        string nomVariable, string valeurSerialisee, CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync(OraParam($"""
+        var rows = await Cn.QueryAsync(OraParam($"""
             SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
             JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
             WHERE v.NOM = :Nom AND v.VALEUR = :Valeur
-            """), new { Nom = nomVariable, Valeur = valeurSerialisee }, transaction);
+            """), new { Nom = nomVariable, Valeur = valeurSerialisee }, Tx);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
-    public async Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(
-        IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync($"""
+        var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")}
             WHERE STATUT IN ('Active', 'Suspendue')
-            """, transaction: transaction);
+            """, transaction: Tx);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
     public async Task MettreAJourStatutAsync(
         long id, StatutInstance statut, string? idNoeudCourant, DateTime? dateFin,
-        IDbTransaction transaction, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             UPDATE {T("INSTANCE_PROCESSUS")}
             SET STATUT = :Statut,
                 ID_NOEUD_COURANT = :NoeudCourant,
@@ -116,14 +111,13 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                 NoeudCourant = idNoeudCourant,
                 DateFin = dateFin,
                 DateMaj = DateTime.UtcNow
-            }, transaction);
+            }, Tx);
     }
 
     public async Task MettreAJourVersionAsync(
-        long id, int nouvelleVersion, string? idNoeudCourant,
-        IDbTransaction transaction, CancellationToken ct = default)
+        long id, int nouvelleVersion, string? idNoeudCourant, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             UPDATE {T("INSTANCE_PROCESSUS")}
             SET VERSION_DEFINITION = :Version,
                 ID_NOEUD_COURANT = :NoeudCourant,
@@ -131,19 +125,18 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
             WHERE ID = :Id
             """),
             new { Id = id, Version = nouvelleVersion, NoeudCourant = idNoeudCourant, DateMaj = DateTime.UtcNow },
-            transaction);
+            Tx);
     }
 
     public async Task<bool> ExisteProcessusActifAsync(
-        string cleDefinition, long aggregateId,
-        IDbTransaction transaction, CancellationToken ct = default)
+        string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
-        var count = await Cn(transaction).QuerySingleAsync<int>(OraParam($"""
+        var count = await Cn.QuerySingleAsync<int>(OraParam($"""
             SELECT COUNT(*) FROM {T("INSTANCE_PROCESSUS")}
             WHERE CLE_DEFINITION = :Cle
               AND AGGREGATE_ID = :AggId
               AND STATUT != 'Terminee'
-            """), new { Cle = cleDefinition, AggId = aggregateId }, transaction);
+            """), new { Cle = cleDefinition, AggId = aggregateId }, Tx);
         return count > 0;
     }
 

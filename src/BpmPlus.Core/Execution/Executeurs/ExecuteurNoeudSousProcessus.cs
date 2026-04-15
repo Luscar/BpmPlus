@@ -6,6 +6,7 @@ namespace BpmPlus.Core.Execution.Executeurs;
 
 public class ExecuteurNoeudSousProcessus
 {
+    private readonly IDbSession _session;
     private readonly IRepositoryDefinition _repoDefinition;
     private readonly IRepositoryInstance _repoInstance;
     private readonly IRepositoryVariable _repoVariable;
@@ -13,12 +14,14 @@ public class ExecuteurNoeudSousProcessus
     private readonly ILogger<ExecuteurNoeudSousProcessus> _logger;
 
     public ExecuteurNoeudSousProcessus(
+        IDbSession session,
         IRepositoryDefinition repoDefinition,
         IRepositoryInstance repoInstance,
         IRepositoryVariable repoVariable,
         Func<MoteurExecution> moteurFactory,
         ILogger<ExecuteurNoeudSousProcessus> logger)
     {
+        _session = session;
         _repoDefinition = repoDefinition;
         _repoInstance = repoInstance;
         _repoVariable = repoVariable;
@@ -36,12 +39,10 @@ public class ExecuteurNoeudSousProcessus
             "NoeudSousProcessus '{Id}' — démarrage sous-processus '{Cle}' v{Version}",
             noeud.Id, noeud.CleDefinition, noeud.Version);
 
-        // Charger la définition enfant
         var definitionEnfant = await _repoDefinition.ObtenirVersionPublieeAsync(
-            noeud.CleDefinition, noeud.Version, contexteParent.Transaction, ct)
+            noeud.CleDefinition, noeud.Version, ct)
             ?? throw new DefinitionIntrouvableException(noeud.CleDefinition, noeud.Version);
 
-        // Créer l'instance enfant
         var maintenant = DateTime.UtcNow;
         var instanceEnfant = new InstanceProcessus
         {
@@ -55,26 +56,23 @@ public class ExecuteurNoeudSousProcessus
             DateMaj = maintenant
         };
 
-        var idEnfant = await _repoInstance.CreerAsync(instanceEnfant, contexteParent.Transaction, ct);
+        var idEnfant = await _repoInstance.CreerAsync(instanceEnfant, ct);
         instanceEnfant.Id = idEnfant;
 
-        // Hériter des variables du parent
         var variablesParent = contexteParent.Variables.ObtenirToutes();
         var variablesEnfant = new Dictionary<string, object?>(variablesParent);
-        await _repoVariable.SauvegarderToutesAsync(idEnfant, variablesEnfant, contexteParent.Transaction, ct);
+        await _repoVariable.SauvegarderToutesAsync(idEnfant, variablesEnfant, ct);
 
-        // Construire le contexte enfant
         var accesseurEnfant = new AccesseurVariables(variablesEnfant);
         var contexteEnfant = new ContexteExecution(
             idEnfant,
             noeud.CleDefinition,
             noeud.Version,
             instanceParente.AggregateId,
-            contexteParent.Transaction,
+            _session,
             accesseurEnfant,
             ct);
 
-        // Exécuter le sous-processus
         var resultatEnfant = await _moteurFactory().ExecuterDepuisDebutAsync(
             definitionEnfant, instanceEnfant, contexteEnfant, ct);
 
@@ -82,7 +80,6 @@ public class ExecuteurNoeudSousProcessus
         {
             _logger.LogInformation(
                 "NoeudSousProcessus '{Id}' — sous-processus suspendu, parent suspendu aussi", noeud.Id);
-            // Le parent se suspend également
             var detail = System.Text.Json.JsonSerializer.Serialize(new
             {
                 typeAttente = "SousProcessus",
@@ -92,7 +89,6 @@ public class ExecuteurNoeudSousProcessus
             return new ResultatNoeud(TypeResultatNoeud.Suspendu, null, detail);
         }
 
-        // Remonter les variables sorties vers le parent
         var variablesFinalesEnfant = accesseurEnfant.ObtenirToutes();
         foreach (var nomVariable in noeud.VariablesSorties)
         {

@@ -8,24 +8,22 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefinition
 {
-    public RepositoryDefinitionOracle(string prefixe) : base(prefixe) { }
+    public RepositoryDefinitionOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
         // En production Oracle, les tables doivent être créées via scripts DDL séparés
-        // Cette méthode est fournie pour la compatibilité avec l'interface
         await Task.CompletedTask;
     }
 
-    public async Task<long> SauvegarderAsync(
-        DefinitionProcessus definition, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<long> SauvegarderAsync(DefinitionProcessus definition, CancellationToken ct = default)
     {
         var json = JsonDefinitionParser.Serialiser(definition);
         var maintenant = DateTime.UtcNow;
 
         if (definition.Id.HasValue)
         {
-            await Cn(transaction).ExecuteAsync(OraParam($"""
+            await Cn.ExecuteAsync(OraParam($"""
                 UPDATE {T("DEFINITION_PROCESSUS")}
                 SET NOM = :Nom,
                     DEFINITION_JSON = :Json,
@@ -33,80 +31,77 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
                 WHERE ID = :Id
                 """),
                 new { definition.Nom, Json = json, DateCreation = maintenant, definition.Id },
-                transaction);
+                Tx);
             return definition.Id.Value;
         }
 
-        var derniereVersion = await Cn(transaction).QuerySingleOrDefaultAsync<int?>(OraParam($"""
+        var derniereVersion = await Cn.QuerySingleOrDefaultAsync<int?>(OraParam($"""
             SELECT MAX(VERSION) FROM {T("DEFINITION_PROCESSUS")} WHERE CLE = :Cle
-            """), new { definition.Cle }, transaction) ?? 0;
+            """), new { definition.Cle }, Tx) ?? 0;
 
         var nouvelleVersion = derniereVersion + 1;
 
-        var id = await Cn(transaction).QuerySingleAsync<long>(OraParam($"""
+        var id = await Cn.QuerySingleAsync<long>(OraParam($"""
             INSERT INTO {T("DEFINITION_PROCESSUS")} (ID, CLE, VERSION, NOM, STATUT, DEFINITION_JSON, DATE_CREATION)
             VALUES ({T("SEQ_DEFINITION")}.NEXTVAL, :Cle, :Version, :Nom, 'Brouillon', :Json, :DateCreation)
             RETURNING ID INTO :NewId
             """),
             new { definition.Cle, Version = nouvelleVersion, definition.Nom, Json = json, DateCreation = maintenant },
-            transaction);
+            Tx);
 
         return id;
     }
 
-    public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(string cle, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = :Cle AND STATUT = 'Brouillon'
             ORDER BY VERSION DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cle }, transaction);
+            """), new { Cle = cle }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
     public async Task<DefinitionProcessus?> ObtenirVersionPublieeAsync(
-        string cle, int version, IDbTransaction transaction, CancellationToken ct = default)
+        string cle, int version, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = :Cle AND VERSION = :Version AND STATUT = 'Publiee'
-            """), new { Cle = cle, Version = version }, transaction);
+            """), new { Cle = cle, Version = version }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
     public async Task<DefinitionProcessus?> ObtenirDerniereVersionPublieeAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+        string cle, CancellationToken ct = default)
     {
-        var row = await Cn(transaction).QuerySingleOrDefaultAsync(OraParam($"""
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = :Cle AND STATUT = 'Publiee'
             ORDER BY VERSION DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cle }, transaction);
+            """), new { Cle = cle }, Tx);
 
         return row is null ? null : MapperDefinition(row);
     }
 
-    public async Task PublierAsync(
-        string cle, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task PublierAsync(string cle, CancellationToken ct = default)
     {
-        await Cn(transaction).ExecuteAsync(OraParam($"""
+        await Cn.ExecuteAsync(OraParam($"""
             UPDATE {T("DEFINITION_PROCESSUS")}
             SET STATUT = 'Publiee', DATE_PUBLICATION = :DatePublication
             WHERE CLE = :Cle AND STATUT = 'Brouillon'
-            """), new { Cle = cle, DatePublication = DateTime.UtcNow }, transaction);
+            """), new { Cle = cle, DatePublication = DateTime.UtcNow }, Tx);
     }
 
-    public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(
-        IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)
     {
-        var rows = await Cn(transaction).QueryAsync($"""
+        var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
-            """, transaction: transaction);
+            """, transaction: Tx);
 
         return rows.Select(r => MapperDefinition(r)).ToList();
     }
