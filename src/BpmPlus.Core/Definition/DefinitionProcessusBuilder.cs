@@ -14,6 +14,17 @@ public class DefinitionProcessusBuilder
 
     public DefinitionProcessusBuilder(string cle) => _cle = cle;
 
+    /// <summary>Crée le builder avec la clé et le nom en une seule instruction.</summary>
+    public DefinitionProcessusBuilder(string cle, string nom) { _cle = cle; _nom = nom; }
+
+    /// <summary>Crée le builder avec clé, nom et nœud de début en une seule instruction.</summary>
+    public DefinitionProcessusBuilder(string cle, string nom, string noeudDebutId)
+    {
+        _cle = cle;
+        _nom = nom;
+        _noeudDebutId = noeudDebutId;
+    }
+
     public DefinitionProcessusBuilder Nommer(string nom) { _nom = nom; return this; }
 
     public DefinitionProcessusBuilder Debuter(string idPremierNoeud)
@@ -30,9 +41,44 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    public DefinitionProcessusBuilder AjouterNoeudMetier(string id, string nom, Action<NoeudMetierBuilder> configure)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.Nommer(nom);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    /// <summary>
+    /// Nœud métier compact sans lambda. Si <paramref name="vers"/> est omis, le nœud est marqué EstFinale.
+    /// </summary>
+    public DefinitionProcessusBuilder AjouterNoeudMetier(
+        string id, string nom, string commande, string aggregateIdVariable, string? vers = null)
+    {
+        var builder = new NoeudMetierBuilder(id);
+        builder.Nommer(nom);
+        builder.CommandeNommee(commande, aggregateIdVariable);
+        if (vers is not null)
+            builder.Vers(vers);
+        else
+            builder.EstFinale();
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
     public DefinitionProcessusBuilder AjouterNoeudInteractif(string id, Action<NoeudInteractifBuilder> configure)
     {
         var builder = new NoeudInteractifBuilder(id);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    public DefinitionProcessusBuilder AjouterNoeudInteractif(string id, string nom, Action<NoeudInteractifBuilder> configure)
+    {
+        var builder = new NoeudInteractifBuilder(id);
+        builder.Nommer(nom);
         configure(builder);
         _noeuds.Add(builder.Construire());
         return this;
@@ -46,9 +92,27 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    public DefinitionProcessusBuilder AjouterNoeudDecision(string id, string nom, Action<NoeudDecisionBuilder> configure)
+    {
+        var builder = new NoeudDecisionBuilder(id);
+        builder.Nommer(nom);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
     public DefinitionProcessusBuilder AjouterNoeudAttenteTemps(string id, Action<NoeudAttenteTempsBuilder> configure)
     {
         var builder = new NoeudAttenteTempsBuilder(id);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    public DefinitionProcessusBuilder AjouterNoeudAttenteTemps(string id, string nom, Action<NoeudAttenteTempsBuilder> configure)
+    {
+        var builder = new NoeudAttenteTempsBuilder(id);
+        builder.Nommer(nom);
         configure(builder);
         _noeuds.Add(builder.Construire());
         return this;
@@ -62,9 +126,27 @@ public class DefinitionProcessusBuilder
         return this;
     }
 
+    public DefinitionProcessusBuilder AjouterNoeudAttenteSignal(string id, string nom, Action<NoeudAttenteSignalBuilder> configure)
+    {
+        var builder = new NoeudAttenteSignalBuilder(id);
+        builder.Nommer(nom);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
     public DefinitionProcessusBuilder AjouterNoeudSousProcessus(string id, Action<NoeudSousProcessusBuilder> configure)
     {
         var builder = new NoeudSousProcessusBuilder(id);
+        configure(builder);
+        _noeuds.Add(builder.Construire());
+        return this;
+    }
+
+    public DefinitionProcessusBuilder AjouterNoeudSousProcessus(string id, string nom, Action<NoeudSousProcessusBuilder> configure)
+    {
+        var builder = new NoeudSousProcessusBuilder(id);
+        builder.Nommer(nom);
         configure(builder);
         _noeuds.Add(builder.Construire());
         return this;
@@ -133,6 +215,14 @@ public class NoeudMetierBuilder : NoeudBaseBuilder<NoeudMetierBuilder, NoeudMeti
         return this;
     }
 
+    /// <summary>Définit la commande et l'aggregate id (depuis une variable) en un seul appel.</summary>
+    public NoeudMetierBuilder CommandeNommee(string nomCommande, string aggregateIdVariable)
+    {
+        _nomCommande = nomCommande;
+        _sourceAggregateId = new SourceVariable(aggregateIdVariable);
+        return this;
+    }
+
     public NoeudMetierBuilder AggregateIdDepuisVariable(string nomVariable)
     {
         _sourceAggregateId = new SourceVariable(nomVariable);
@@ -185,6 +275,13 @@ public class NoeudInteractifBuilder : NoeudBaseBuilder<NoeudInteractifBuilder, N
         return this;
     }
 
+    /// <summary>Définit la tâche avec titre et description sans sous-builder.</summary>
+    public NoeudInteractifBuilder DefinirTache(string titre, string? description = null)
+    {
+        _definitionTache = new DefinitionTache { Titre = titre, Description = description };
+        return this;
+    }
+
     public NoeudInteractifBuilder AvecCommandePre(string nomCommande, Action<CommandeBuilder>? configure = null)
     {
         var builder = new CommandeBuilder(nomCommande);
@@ -193,11 +290,33 @@ public class NoeudInteractifBuilder : NoeudBaseBuilder<NoeudInteractifBuilder, N
         return this;
     }
 
+    /// <summary>Définit la commande PRE avec aggregate id (depuis une variable) en un seul appel.</summary>
+    public NoeudInteractifBuilder AvecCommandePre(string nomCommande, string aggregateIdVariable)
+    {
+        _commandePre = new DefinitionCommande
+        {
+            NomCommande = nomCommande,
+            SourceAggregateId = new SourceVariable(aggregateIdVariable)
+        };
+        return this;
+    }
+
     public NoeudInteractifBuilder AvecCommandePost(string nomCommande, Action<CommandeBuilder>? configure = null)
     {
         var builder = new CommandeBuilder(nomCommande);
         configure?.Invoke(builder);
         _commandePost = builder.Construire();
+        return this;
+    }
+
+    /// <summary>Définit la commande POST avec aggregate id (depuis une variable) en un seul appel.</summary>
+    public NoeudInteractifBuilder AvecCommandePost(string nomCommande, string aggregateIdVariable)
+    {
+        _commandePost = new DefinitionCommande
+        {
+            NomCommande = nomCommande,
+            SourceAggregateId = new SourceVariable(aggregateIdVariable)
+        };
         return this;
     }
 
@@ -227,6 +346,26 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
         return new FluxSortantBuilder(this, flux);
     }
 
+    /// <summary>Condition : variable == valeur.</summary>
+    public FluxSortantBuilder SiEgal(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Egal, valeur);
+
+    /// <summary>Condition : variable != valeur.</summary>
+    public FluxSortantBuilder SiDifferent(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Different, valeur);
+
+    /// <summary>Condition : variable > valeur.</summary>
+    public FluxSortantBuilder SiSuperieur(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Superieur, valeur);
+
+    /// <summary>Condition : variable < valeur.</summary>
+    public FluxSortantBuilder SiInferieur(string nomVariable, object? valeur)
+        => SiVariable(nomVariable, Operateur.Inferieur, valeur);
+
+    /// <summary>Condition : variable contient valeur (string).</summary>
+    public FluxSortantBuilder SiContient(string nomVariable, string valeur)
+        => SiVariable(nomVariable, Operateur.Contient, valeur);
+
     public FluxSortantBuilder SiQuery(string nomQuery,
         ISourceParametre? sourceAggregateId = null,
         Dictionary<string, ISourceParametre>? parametres = null)
@@ -234,6 +373,17 @@ public class NoeudDecisionBuilder : NoeudBaseBuilder<NoeudDecisionBuilder, Noeud
         var flux = new FluxSortant
         {
             Condition = new ConditionQuery(nomQuery, sourceAggregateId, parametres)
+        };
+        _fluxSortants.Add(flux);
+        return new FluxSortantBuilder(this, flux);
+    }
+
+    /// <summary>Condition query avec aggregate id depuis une variable — paramètres ajoutables via ParametreQuery*.</summary>
+    public FluxSortantBuilder SiQuery(string nomQuery, string aggregateIdVariable)
+    {
+        var flux = new FluxSortant
+        {
+            Condition = new ConditionQuery(nomQuery, new SourceVariable(aggregateIdVariable))
         };
         _fluxSortants.Add(flux);
         return new FluxSortantBuilder(this, flux);
@@ -267,10 +417,40 @@ public class FluxSortantBuilder
         _flux = flux;
     }
 
+    /// <summary>Ajoute un paramètre (depuis une variable) à la ConditionQuery de ce flux.</summary>
+    public FluxSortantBuilder ParametreQueryDepuisVariable(string nomParam, string nomVariable)
+    {
+        EnsureConditionQuery().Parametres![nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre statique à la ConditionQuery de ce flux.</summary>
+    public FluxSortantBuilder ParametreQueryStatique(string nomParam, object? valeur)
+    {
+        EnsureConditionQuery().Parametres![nomParam] = new SourceValeurStatique(valeur);
+        return this;
+    }
+
     public NoeudDecisionBuilder Vers(string idNoeudSuivant)
     {
         _flux.Vers = idNoeudSuivant;
         return _parent;
+    }
+
+    private ConditionQuery EnsureConditionQuery()
+    {
+        if (_flux.Condition is not ConditionQuery cq)
+            throw new InvalidOperationException(
+                "ParametreQuery* n'est disponible que sur un flux créé avec SiQuery().");
+
+        if (cq.Parametres is null)
+        {
+            var avecParametres = cq with { Parametres = new Dictionary<string, ISourceParametre>() };
+            _flux.Condition = avecParametres;
+            return avecParametres;
+        }
+
+        return cq;
     }
 }
 
@@ -295,7 +475,28 @@ public class NoeudAttenteTempsBuilder : NoeudBaseBuilder<NoeudAttenteTempsBuilde
     public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery,
         ISourceParametre? sourceAggregateId = null)
     {
-        _sourceDate = new SourceQuery(nomQuery, sourceAggregateId);
+        _sourceDate = new SourceQuery(nomQuery, sourceAggregateId, new Dictionary<string, ISourceParametre>());
+        return this;
+    }
+
+    /// <summary>Échéance via query avec aggregate id depuis une variable.</summary>
+    public NoeudAttenteTempsBuilder EcheanceDepuisQuery(string nomQuery, string aggregateIdVariable)
+    {
+        _sourceDate = new SourceQuery(nomQuery, new SourceVariable(aggregateIdVariable), new Dictionary<string, ISourceParametre>());
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre (depuis une variable) à la query d'échéance. Appeler après EcheanceDepuisQuery.</summary>
+    public NoeudAttenteTempsBuilder ParametreQueryDepuisVariable(string nomParam, string nomVariable)
+    {
+        ((SourceQuery)_sourceDate).Parametres![nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    /// <summary>Ajoute un paramètre statique à la query d'échéance. Appeler après EcheanceDepuisQuery.</summary>
+    public NoeudAttenteTempsBuilder ParametreQueryStatique(string nomParam, object? valeur)
+    {
+        ((SourceQuery)_sourceDate).Parametres![nomParam] = new SourceValeurStatique(valeur);
         return this;
     }
 
@@ -348,6 +549,13 @@ public class NoeudSousProcessusBuilder : NoeudBaseBuilder<NoeudSousProcessusBuil
         return this;
     }
 
+    /// <summary>Déclare plusieurs variables de sortie en un seul appel.</summary>
+    public NoeudSousProcessusBuilder SortiesVariables(params string[] noms)
+    {
+        _variablesSorties.AddRange(noms);
+        return this;
+    }
+
     public override NoeudSousProcessus Construire() => new()
     {
         Id = _id,
@@ -396,6 +604,12 @@ public class CommandeBuilder
     public CommandeBuilder ParametreDepuisVariable(string nomParam, string nomVariable)
     {
         _parametres[nomParam] = new SourceVariable(nomVariable);
+        return this;
+    }
+
+    public CommandeBuilder ParametreStatique(string nomParam, object? valeur)
+    {
+        _parametres[nomParam] = new SourceValeurStatique(valeur);
         return this;
     }
 
