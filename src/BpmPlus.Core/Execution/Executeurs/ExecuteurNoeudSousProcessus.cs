@@ -6,7 +6,6 @@ namespace BpmPlus.Core.Execution.Executeurs;
 
 public class ExecuteurNoeudSousProcessus
 {
-    private readonly IDbSession _session;
     private readonly IRepositoryDefinition _repoDefinition;
     private readonly IRepositoryInstance _repoInstance;
     private readonly IRepositoryVariable _repoVariable;
@@ -14,14 +13,12 @@ public class ExecuteurNoeudSousProcessus
     private readonly ILogger<ExecuteurNoeudSousProcessus> _logger;
 
     public ExecuteurNoeudSousProcessus(
-        IDbSession session,
         IRepositoryDefinition repoDefinition,
         IRepositoryInstance repoInstance,
         IRepositoryVariable repoVariable,
         Func<MoteurExecution> moteurFactory,
         ILogger<ExecuteurNoeudSousProcessus> logger)
     {
-        _session = session;
         _repoDefinition = repoDefinition;
         _repoInstance = repoInstance;
         _repoVariable = repoVariable;
@@ -69,7 +66,6 @@ public class ExecuteurNoeudSousProcessus
             noeud.CleDefinition,
             noeud.Version,
             instanceParente.AggregateId,
-            _session,
             accesseurEnfant,
             ct);
 

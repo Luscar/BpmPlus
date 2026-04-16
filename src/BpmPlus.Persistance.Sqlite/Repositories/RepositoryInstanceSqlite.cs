@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstance
 {
-    public RepositoryInstanceSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryInstanceSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -56,7 +56,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 DateFin = instance.DateFin?.ToString("O"),
                 DateCreation = maintenant,
                 DateMaj = maintenant
-            }, Tx);
+            });
 
         return id;
     }
@@ -65,7 +65,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
     {
         var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID = @Id
-            """, new { Id = id }, Tx);
+            """, new { Id = id });
         return row is null ? null : MapperInstance(row);
     }
 
@@ -78,7 +78,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
               AND AGGREGATE_ID = @AggId
               AND STATUT != 'Terminee'
             LIMIT 1
-            """, new { Cle = cleDefinition, AggId = aggregateId }, Tx);
+            """, new { Cle = cleDefinition, AggId = aggregateId });
         return row is null ? null : MapperInstance(row);
     }
 
@@ -87,7 +87,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
     {
         var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID_INSTANCE_PARENT = @IdParent
-            """, new { IdParent = idParent }, Tx);
+            """, new { IdParent = idParent });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -98,7 +98,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
             SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
             JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
             WHERE v.NOM = @Nom AND v.VALEUR = @Valeur
-            """, new { Nom = nomVariable, Valeur = valeurSerialisee }, Tx);
+            """, new { Nom = nomVariable, Valeur = valeurSerialisee });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -107,7 +107,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
         var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")}
             WHERE STATUT IN ('Active', 'Suspendue')
-            """, transaction: Tx);
+            """);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -130,7 +130,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 NoeudCourant = idNoeudCourant,
                 DateFin = dateFin?.ToString("O"),
                 DateMaj = DateTime.UtcNow.ToString("O")
-            }, Tx);
+            });
     }
 
     public async Task MettreAJourVersionAsync(
@@ -149,7 +149,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 Version = nouvelleVersion,
                 NoeudCourant = idNoeudCourant,
                 DateMaj = DateTime.UtcNow.ToString("O")
-            }, Tx);
+            });
     }
 
     public async Task<bool> ExisteProcessusActifAsync(
@@ -160,7 +160,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
             WHERE CLE_DEFINITION = @Cle
               AND AGGREGATE_ID = @AggId
               AND STATUT != 'Terminee'
-            """, new { Cle = cleDefinition, AggId = aggregateId }, Tx);
+            """, new { Cle = cleDefinition, AggId = aggregateId });
         return count > 0;
     }
 

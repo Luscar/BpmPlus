@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenement
 {
-    public RepositoryEvenementSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryEvenementSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -44,7 +44,7 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
                 evenement.DureeMs,
                 Resultat = evenement.Resultat?.ToString(),
                 evenement.Detail
-            }, Tx);
+            });
     }
 
     public async Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(
@@ -54,7 +54,7 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = @IdInstance
             ORDER BY ID
-            """, new { IdInstance = idInstance }, Tx);
+            """, new { IdInstance = idInstance });
 
         return rows.Select(MapperEvenement).ToList();
     }
@@ -67,7 +67,7 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
             WHERE ID_INSTANCE = @IdInstance
               AND TYPE_EVENEMENT = 'NoeudSuspendu'
             ORDER BY ID DESC LIMIT 1
-            """, new { IdInstance = idInstance }, Tx);
+            """, new { IdInstance = idInstance });
 
         return row is null ? null : MapperEvenement(row);
     }

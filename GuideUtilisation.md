@@ -95,9 +95,9 @@ Le module enregistre automatiquement :
 - `IServiceMigration` — migration de versions (scoped)
 - Tous les handlers trouvés via `ScanHandlers`
 
-### 3.1 Fournir `IDbSession` par unité de travail
+### 3.1 Fournir `IDbConnection` par unité de travail
 
-`BpmModule` **n'enregistre pas `IDbSession`**. Votre application est responsable de fournir une instance `IDbSession` (connexion + transaction) dans chaque lifetime scope Autofac avant d'utiliser les services BPM.
+`BpmModule` **n'enregistre pas `IDbConnection`**. Votre application est responsable de fournir une instance `IDbConnection` dans chaque lifetime scope Autofac avant d'utiliser les services BPM.
 
 Pattern recommandé :
 
@@ -105,11 +105,11 @@ Pattern recommandé :
 using var connexion = _connectionFactory.Creer();
 using var transaction = connexion.BeginTransaction();
 
-// Créer un sous-scope qui fournit IDbSession au moteur et à tous les handlers
+// Créer un sous-scope qui fournit IDbConnection au moteur et à tous les handlers
 using var scope = _container.BeginLifetimeScope(b =>
-    b.RegisterInstance(new DbSession(connexion, transaction))
-     .As<IDbSession>()
-     .ExternallyOwned());  // BpmPlus ne dispose pas la connexion ni la transaction
+    b.RegisterInstance(connexion)
+     .As<IDbConnection>()
+     .ExternallyOwned());  // BpmPlus ne dispose pas la connexion
 
 var serviceFlux = scope.Resolve<IServiceFlux>();
 
@@ -132,11 +132,10 @@ Utilisé par les nœuds métier et les commandes PRE/POST des nœuds interactifs
 ```csharp
 public class ValiderCommandeCommand : IBpmHandlerCommande
 {
-    // IDbSession est injecté dans le même scope Autofac que le moteur :
-    // connexion et transaction identiques à celles utilisées par BpmPlus.
-    private readonly IDbSession _session;
+    // IDbConnection est injecté dans le même scope Autofac que le moteur.
+    private readonly IDbConnection _connection;
 
-    public ValiderCommandeCommand(IDbSession session) => _session = session;
+    public ValiderCommandeCommand(IDbConnection connection) => _connection = connection;
 
     // Convention : NomCommande = PascalCase(id du nœud) + "Command"
     // Le nœud "valider-commande" résout automatiquement ce handler.
@@ -151,7 +150,7 @@ public class ValiderCommandeCommand : IBpmHandlerCommande
         // parametres  : valeurs résolues depuis les variables du processus
         // contexte    : accès aux variables et à l'ID d'instance
 
-        using var repo = new CommandeRepository(_session.Connection, _session.Transaction);
+        using var repo = new CommandeRepository(_connection);
         await repo.ValiderAsync(aggregateId!.Value);
 
         // Écrire une variable de processus si nécessaire
@@ -172,9 +171,9 @@ Utilisé pour les conditions de nœud décision (`ConditionQuery`) et les dates 
 // Pour une condition booléenne
 public class EstCommandeUrgente : IBpmHandlerQuery<bool>
 {
-    private readonly IDbSession _session;
+    private readonly IDbConnection _connection;
 
-    public EstCommandeUrgente(IDbSession session) => _session = session;
+    public EstCommandeUrgente(IDbConnection connection) => _connection = connection;
 
     public string NomQuery => "EstCommandeUrgente";
 
@@ -184,7 +183,7 @@ public class EstCommandeUrgente : IBpmHandlerQuery<bool>
         IContexteExecution contexte)
     {
         // aggregateId vient automatiquement de l'instance (contexte.AggregateId)
-        using var repo = new CommandeRepository(_session.Connection, _session.Transaction);
+        using var repo = new CommandeRepository(_connection);
         var commande = await repo.ObtenirAsync(aggregateId!.Value);
         return commande.MontantTotal > 10_000;
     }
@@ -399,7 +398,7 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
 Les définitions suivent le cycle : **Brouillon → Publiée (immuable)**.
 
 ```csharp
-// IDbSession est fourni via le scope Autofac (voir §3.1)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // 1. Sauvegarder un brouillon (peut être écrasé)
 await _serviceFlux.SauvegarderDefinitionAsync(definition);
@@ -420,7 +419,7 @@ var definitions = await _serviceFlux.ObtenirDefinitionsAsync();
 ### Démarrer
 
 ```csharp
-// IDbSession est fourni via le scope Autofac (voir §3.1)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 var variables = new Dictionary<string, object?>
 {
@@ -464,7 +463,7 @@ var instances = await _serviceFlux.RechercherParVariableAsync("statut", "EnAtten
 Lorsqu'une instance est suspendue sur un nœud interactif (après qu'un utilisateur a traité la tâche), appelez `TerminerEtapeAsync` :
 
 ```csharp
-// IDbSession est fourni via le scope Autofac (voir §3.1)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // Optionnel : écrire le résultat de la tâche dans les variables avant de reprendre
 await _serviceFlux.ModifierVariableAsync(idInstance, "statut", "Approuvee");
@@ -511,7 +510,7 @@ Le réveil des instances suspendues sur un `NoeudAttenteTemps` est **entièremen
 
 ```csharp
 // Exécuté périodiquement (ex : toutes les minutes)
-// IDbSession est fourni via le scope Autofac (voir §3.1)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 public async Task ReveilllerInstancesEchuesAsync()
 {
     var instancesEchues = await _serviceFlux.ObtenirInstancesEchuesAsync(DateTime.UtcNow);
@@ -594,7 +593,7 @@ foreach (var evenement in historique)
 La migration permet de faire passer des instances actives vers une nouvelle version publiée d'une définition, sans interruption.
 
 ```csharp
-// IDbSession est fourni via le scope Autofac (voir §3.1)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // Migrer une seule instance
 var resultat = await _serviceMigration.MigrerAsync(
@@ -647,8 +646,8 @@ using var connexion = _connectionFactory.Creer();
 using var transaction = connexion.BeginTransaction();
 
 using var scope = _container.BeginLifetimeScope(b =>
-    b.RegisterInstance(new DbSession(connexion, transaction))
-     .As<IDbSession>()
+    b.RegisterInstance(connexion)
+     .As<IDbConnection>()
      .ExternallyOwned());
 
 var serviceFlux = scope.Resolve<IServiceFlux>();

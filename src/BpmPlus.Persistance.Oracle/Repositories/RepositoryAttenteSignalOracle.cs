@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAttenteSignal
 {
-    public RepositoryAttenteSignalOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryAttenteSignalOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -25,7 +25,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     {
         await Cn.ExecuteAsync(OraParam($"""
             DELETE FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
     }
 
     public async Task<IReadOnlyList<long>> ObtenirInstancesEnAttenteAsync(
@@ -33,7 +33,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     {
         var ids = await Cn.QueryAsync<long>(OraParam($"""
             SELECT ID_INSTANCE FROM {T("ATTENTE_SIGNAL")} WHERE NOM_SIGNAL = :NomSignal
-            """), new { NomSignal = nomSignal }, Tx);
+            """), new { NomSignal = nomSignal });
         return ids.ToList();
     }
 
@@ -42,7 +42,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     {
         var signaux = await Cn.QueryAsync<string>(OraParam($"""
             SELECT NOM_SIGNAL FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
         return signaux.ToList();
     }
 }

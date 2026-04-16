@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariable
 {
-    public RepositoryVariableOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryVariableOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -16,7 +16,7 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
     {
         await Cn.ExecuteAsync(OraParam($"""
             DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
 
         foreach (var (nom, valeur) in variables)
         {
@@ -35,7 +35,7 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
     {
         var rows = await Cn.QueryAsync(OraParam($"""
             SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)

@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenement
 {
-    public RepositoryEvenementOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryEvenementOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -30,7 +30,7 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
                 evenement.DureeMs,
                 Resultat = evenement.Resultat?.ToString(),
                 evenement.Detail
-            }, Tx);
+            });
     }
 
     public async Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(
@@ -40,7 +40,7 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
             SELECT * FROM {T("EVENEMENT_INSTANCE")}
             WHERE ID_INSTANCE = :IdInstance
             ORDER BY ID
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
 
         return rows.Select(MapperEvenement).ToList();
     }
@@ -54,7 +54,7 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
               AND TYPE_EVENEMENT = 'NoeudSuspendu'
             ORDER BY ID DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { IdInstance = idInstance }, Tx);
+            """), new { IdInstance = idInstance });
 
         return row is null ? null : MapperEvenement(row);
     }
