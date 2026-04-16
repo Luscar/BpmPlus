@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefinition
 {
-    public RepositoryDefinitionOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryDefinitionOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -37,7 +37,7 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
 
         var derniereVersion = await Cn.QuerySingleOrDefaultAsync<int?>(OraParam($"""
             SELECT MAX(VERSION) FROM {T("DEFINITION_PROCESSUS")} WHERE CLE = :Cle
-            """), new { definition.Cle }, Tx) ?? 0;
+            """), new { definition.Cle }) ?? 0;
 
         var nouvelleVersion = derniereVersion + 1;
 
@@ -59,7 +59,7 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
             WHERE CLE = :Cle AND STATUT = 'Brouillon'
             ORDER BY VERSION DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cle }, Tx);
+            """), new { Cle = cle });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -70,7 +70,7 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = :Cle AND VERSION = :Version AND STATUT = 'Publiee'
-            """), new { Cle = cle, Version = version }, Tx);
+            """), new { Cle = cle, Version = version });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -83,7 +83,7 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
             WHERE CLE = :Cle AND STATUT = 'Publiee'
             ORDER BY VERSION DESC
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cle }, Tx);
+            """), new { Cle = cle });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -94,14 +94,14 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
             UPDATE {T("DEFINITION_PROCESSUS")}
             SET STATUT = 'Publiee', DATE_PUBLICATION = :DatePublication
             WHERE CLE = :Cle AND STATUT = 'Brouillon'
-            """), new { Cle = cle, DatePublication = DateTime.UtcNow }, Tx);
+            """), new { Cle = cle, DatePublication = DateTime.UtcNow });
     }
 
     public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
-            """, transaction: Tx);
+            """);
 
         return rows.Select(r => MapperDefinition(r)).ToList();
     }

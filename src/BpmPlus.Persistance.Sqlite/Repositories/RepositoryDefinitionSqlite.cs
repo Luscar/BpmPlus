@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefinition
 {
-    public RepositoryDefinitionSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryDefinitionSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -48,7 +48,7 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
 
         var derniereVersion = await Cn.QuerySingleOrDefaultAsync<int?>($"""
             SELECT MAX(VERSION) FROM {T("DEFINITION_PROCESSUS")} WHERE CLE = @Cle
-            """, new { definition.Cle }, Tx) ?? 0;
+            """, new { definition.Cle }) ?? 0;
 
         var nouvelleVersion = derniereVersion + 1;
 
@@ -69,7 +69,7 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND STATUT = 'Brouillon'
             ORDER BY VERSION DESC LIMIT 1
-            """, new { Cle = cle }, Tx);
+            """, new { Cle = cle });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -80,7 +80,7 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
         var row = await Cn.QuerySingleOrDefaultAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND VERSION = @Version AND STATUT = 'Publiee'
-            """, new { Cle = cle, Version = version }, Tx);
+            """, new { Cle = cle, Version = version });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -92,7 +92,7 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
             SELECT * FROM {T("DEFINITION_PROCESSUS")}
             WHERE CLE = @Cle AND STATUT = 'Publiee'
             ORDER BY VERSION DESC LIMIT 1
-            """, new { Cle = cle }, Tx);
+            """, new { Cle = cle });
 
         return row is null ? null : MapperDefinition(row);
     }
@@ -104,14 +104,14 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
             UPDATE {T("DEFINITION_PROCESSUS")}
             SET STATUT = 'Publiee', DATE_PUBLICATION = @DatePublication
             WHERE CLE = @Cle AND STATUT = 'Brouillon'
-            """, new { Cle = cle, DatePublication = maintenant }, Tx);
+            """, new { Cle = cle, DatePublication = maintenant });
     }
 
     public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
-            """, transaction: Tx);
+            """);
 
         return rows.Select(r => MapperDefinition(r)).ToList();
     }

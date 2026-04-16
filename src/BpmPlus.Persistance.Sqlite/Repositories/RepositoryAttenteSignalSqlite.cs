@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryAttenteSignalSqlite : SqliteRepositoryBase, IRepositoryAttenteSignal
 {
-    public RepositoryAttenteSignalSqlite(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryAttenteSignalSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -37,7 +37,7 @@ public class RepositoryAttenteSignalSqlite : SqliteRepositoryBase, IRepositoryAt
     {
         await Cn.ExecuteAsync($"""
             DELETE FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance }, Tx);
+            """, new { IdInstance = idInstance });
     }
 
     public async Task<IReadOnlyList<long>> ObtenirInstancesEnAttenteAsync(
@@ -45,7 +45,7 @@ public class RepositoryAttenteSignalSqlite : SqliteRepositoryBase, IRepositoryAt
     {
         var ids = await Cn.QueryAsync<long>($"""
             SELECT ID_INSTANCE FROM {T("ATTENTE_SIGNAL")} WHERE NOM_SIGNAL = @NomSignal
-            """, new { NomSignal = nomSignal }, Tx);
+            """, new { NomSignal = nomSignal });
         return ids.ToList();
     }
 
@@ -54,7 +54,7 @@ public class RepositoryAttenteSignalSqlite : SqliteRepositoryBase, IRepositoryAt
     {
         var signaux = await Cn.QueryAsync<string>($"""
             SELECT NOM_SIGNAL FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance }, Tx);
+            """, new { IdInstance = idInstance });
         return signaux.ToList();
     }
 }

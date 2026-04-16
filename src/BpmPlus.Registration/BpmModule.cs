@@ -1,3 +1,4 @@
+using System.Data;
 using System.Reflection;
 using Autofac;
 using BpmPlus.Abstractions;
@@ -6,6 +7,7 @@ using BpmPlus.Core.Execution.Executeurs;
 using BpmPlus.Core.Persistance;
 using BpmPlus.Core.Services;
 using BpmPlus.Persistance.Oracle.Repositories;
+using BpmPlus.Persistance.Sqlite;
 using BpmPlus.Persistance.Sqlite.Repositories;
 
 namespace BpmPlus.Registration;
@@ -72,7 +74,6 @@ public class BpmModule : Autofac.Module
         {
             var scope = ctx.Resolve<ILifetimeScope>();
             return new ExecuteurNoeudSousProcessus(
-                ctx.Resolve<IDbSession>(),
                 ctx.Resolve<IRepositoryDefinition>(),
                 ctx.Resolve<IRepositoryInstance>(),
                 ctx.Resolve<IRepositoryVariable>(),
@@ -99,28 +100,30 @@ public class BpmModule : Autofac.Module
         switch (_config.Backend)
         {
             case BackendPersistance.Sqlite:
-                builder.Register(ctx => new RepositoryDefinitionSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryDefinitionSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryDefinition>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryInstanceSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryInstanceSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryInstance>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryVariableSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryVariableSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryVariable>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryEvenementSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryEvenementSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
+                builder.RegisterType<SchemaCreator>()
+                    .AsSelf().InstancePerLifetimeScope();
                 break;
 
             case BackendPersistance.Oracle:
-                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryDefinition>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryInstance>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryVariable>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbSession>(), prefixe))
+                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 break;
         }

@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstance
 {
-    public RepositoryInstanceOracle(IDbSession session, string prefixe) : base(session, prefixe) { }
+    public RepositoryInstanceOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -37,7 +37,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                 DateFin = instance.DateFin,
                 DateCreation = maintenant,
                 DateMaj = maintenant
-            }, Tx);
+            });
 
         return id;
     }
@@ -46,7 +46,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID = :Id
-            """), new { Id = id }, Tx);
+            """), new { Id = id });
         return row is null ? null : MapperInstance(row);
     }
 
@@ -59,7 +59,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
               AND AGGREGATE_ID = :AggId
               AND STATUT != 'Terminee'
             FETCH FIRST 1 ROW ONLY
-            """), new { Cle = cleDefinition, AggId = aggregateId }, Tx);
+            """), new { Cle = cleDefinition, AggId = aggregateId });
         return row is null ? null : MapperInstance(row);
     }
 
@@ -68,7 +68,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     {
         var rows = await Cn.QueryAsync(OraParam($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID_INSTANCE_PARENT = :IdParent
-            """), new { IdParent = idParent }, Tx);
+            """), new { IdParent = idParent });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -79,7 +79,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
             SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
             JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
             WHERE v.NOM = :Nom AND v.VALEUR = :Valeur
-            """), new { Nom = nomVariable, Valeur = valeurSerialisee }, Tx);
+            """), new { Nom = nomVariable, Valeur = valeurSerialisee });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -88,7 +88,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         var rows = await Cn.QueryAsync($"""
             SELECT * FROM {T("INSTANCE_PROCESSUS")}
             WHERE STATUT IN ('Active', 'Suspendue')
-            """, transaction: Tx);
+            """);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
@@ -111,7 +111,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                 NoeudCourant = idNoeudCourant,
                 DateFin = dateFin,
                 DateMaj = DateTime.UtcNow
-            }, Tx);
+            });
     }
 
     public async Task MettreAJourVersionAsync(
@@ -136,7 +136,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
             WHERE CLE_DEFINITION = :Cle
               AND AGGREGATE_ID = :AggId
               AND STATUT != 'Terminee'
-            """), new { Cle = cleDefinition, AggId = aggregateId }, Tx);
+            """), new { Cle = cleDefinition, AggId = aggregateId });
         return count > 0;
     }
 

@@ -9,6 +9,7 @@
 1. [Vue d'ensemble](#1-vue-densemble)
 2. [Installation](#2-installation)
 3. [Configuration (Autofac)](#3-configuration-autofac)
+   - [3.2 Démarrage complet](#32-démarrage-complet--de-linstallation-au-premier-processus)
 4. [Implémenter les handlers](#4-implémenter-les-handlers)
 5. [Définir un processus](#5-définir-un-processus)
 6. [Gérer les définitions](#6-gérer-les-définitions)
@@ -95,6 +96,111 @@ Le module enregistre automatiquement :
 - `IServiceMigration` — migration de versions (scoped)
 - Tous les handlers trouvés via `ScanHandlers`
 
+### 3.1 Fournir `IDbConnection` par unité de travail
+
+`BpmModule` **n'enregistre pas `IDbConnection`**. Votre application est responsable de fournir une instance `IDbConnection` dans chaque lifetime scope Autofac avant d'utiliser les services BPM.
+
+Pattern recommandé :
+
+```csharp
+using var connexion = _connectionFactory.Creer();
+using var transaction = connexion.BeginTransaction();
+
+// Créer un sous-scope qui fournit IDbConnection au moteur et à tous les handlers
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion)
+     .As<IDbConnection>()
+     .ExternallyOwned());  // BpmPlus ne dispose pas la connexion
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+
+// Appels au service — aucun paramètre de transaction requis
+await serviceFlux.DemarrerAsync("approbation-commande", aggregateId, variables);
+
+transaction.Commit();
+```
+
+> Dans une application web, ce pattern est généralement encapsulé dans un middleware ou une factory qui crée le scope pour chaque requête HTTP.
+
+### 3.2 Démarrage complet — de l'installation au premier processus
+
+Les quatre étapes ci-dessous constituent le setup minimal pour intégrer BpmPlus dans une application.
+
+#### Étape 1 — Enregistrer le module
+
+```csharp
+var builder = new ContainerBuilder();
+
+builder.RegisterModule(new BpmModule(config =>
+{
+    config.ScanHandlers(Assembly.GetExecutingAssembly());
+    config.UseSqlite("BPM");   // tests / développement
+    // config.UseOracle("BPM"); // production
+}));
+
+_container = builder.Build();
+```
+
+#### Étape 2 — Créer les tables (SQLite uniquement)
+
+En production Oracle, les tables sont créées via des scripts DDL fournis séparément. Pour SQLite, utilisez le `SchemaCreator` enregistré automatiquement par `UseSqlite` :
+
+```csharp
+using var connexion = new SqliteConnection("Data Source=bpm.db");
+connexion.Open();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+await scope.Resolve<SchemaCreator>().CreerToutesLesTablesAsync(connexion);
+```
+
+#### Étape 3 — Enregistrer et publier une définition
+
+À faire une fois par définition (ou à chaque nouvelle version) :
+
+```csharp
+var definition = new DefinitionProcessusBuilder("approbation-commande",
+        "Processus d'approbation", "valider-commande")
+    .AjouterNoeudMetier("valider-commande", "Valider la commande", vers: "notifier")
+    .AjouterNoeudMetier("notifier", "Notifier le résultat")
+    .Construire();
+
+using var connexion = _connectionFactory.Creer();
+using var transaction = connexion.BeginTransaction();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+await serviceFlux.SauvegarderDefinitionAsync(definition);
+await serviceFlux.PublierDefinitionAsync("approbation-commande");
+
+transaction.Commit();
+```
+
+#### Étape 4 — Démarrer une instance
+
+À chaque fois qu'un processus doit être lancé pour un agrégat :
+
+```csharp
+using var connexion = _connectionFactory.Creer();
+using var transaction = connexion.BeginTransaction();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+long idInstance = await serviceFlux.DemarrerAsync(
+    cleDefinition:      "approbation-commande",
+    aggregateId:        42L,
+    variablesInitiales: new Dictionary<string, object?> { ["montant"] = 1500m });
+
+transaction.Commit();
+```
+
+Les sections suivantes détaillent chaque aspect individuellement.
+
 ---
 
 ## 4. Implémenter les handlers
@@ -106,6 +212,11 @@ Utilisé par les nœuds métier et les commandes PRE/POST des nœuds interactifs
 ```csharp
 public class ValiderCommandeCommand : IBpmHandlerCommande
 {
+    // IDbConnection est injecté dans le même scope Autofac que le moteur.
+    private readonly IDbConnection _connection;
+
+    public ValiderCommandeCommand(IDbConnection connection) => _connection = connection;
+
     // Convention : NomCommande = PascalCase(id du nœud) + "Command"
     // Le nœud "valider-commande" résout automatiquement ce handler.
     public string NomCommande => "ValiderCommandeCommand";
@@ -117,9 +228,9 @@ public class ValiderCommandeCommand : IBpmHandlerCommande
     {
         // aggregateId : ID de l'agrégat de l'instance (fourni automatiquement par le moteur)
         // parametres  : valeurs résolues depuis les variables du processus
-        // contexte    : accès à la transaction, aux variables, à l'ID d'instance
+        // contexte    : accès aux variables et à l'ID d'instance
 
-        using var repo = new CommandeRepository(contexte.Transaction);
+        using var repo = new CommandeRepository(_connection);
         await repo.ValiderAsync(aggregateId!.Value);
 
         // Écrire une variable de processus si nécessaire
@@ -140,6 +251,10 @@ Utilisé pour les conditions de nœud décision (`ConditionQuery`) et les dates 
 // Pour une condition booléenne
 public class EstCommandeUrgente : IBpmHandlerQuery<bool>
 {
+    private readonly IDbConnection _connection;
+
+    public EstCommandeUrgente(IDbConnection connection) => _connection = connection;
+
     public string NomQuery => "EstCommandeUrgente";
 
     public async Task<bool> ExecuterAsync(
@@ -148,7 +263,7 @@ public class EstCommandeUrgente : IBpmHandlerQuery<bool>
         IContexteExecution contexte)
     {
         // aggregateId vient automatiquement de l'instance (contexte.AggregateId)
-        using var repo = new CommandeRepository(contexte.Transaction);
+        using var repo = new CommandeRepository(_connection);
         var commande = await repo.ObtenirAsync(aggregateId!.Value);
         return commande.MontantTotal > 10_000;
     }
@@ -363,20 +478,16 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
 Les définitions suivent le cycle : **Brouillon → Publiée (immuable)**.
 
 ```csharp
-// Votre application fournit toujours la transaction
-using var connexion = _connectionFactory.Creer();
-using var transaction = connexion.BeginTransaction();
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // 1. Sauvegarder un brouillon (peut être écrasé)
-await _serviceFlux.SauvegarderDefinitionAsync(definition, transaction);
+await _serviceFlux.SauvegarderDefinitionAsync(definition);
 
 // 2. Publier (rend la définition immuable et utilisable)
-await _serviceFlux.PublierDefinitionAsync("approbation-commande", transaction);
-
-transaction.Commit();
+await _serviceFlux.PublierDefinitionAsync("approbation-commande");
 
 // Lister toutes les définitions (toutes versions, tous statuts)
-var definitions = await _serviceFlux.ObtenirDefinitionsAsync(transaction);
+var definitions = await _serviceFlux.ObtenirDefinitionsAsync();
 ```
 
 > Une définition publiée ne peut plus être modifiée. Pour une nouvelle version, sauvegardez un nouveau brouillon avec la même clé, puis publiez-le.
@@ -388,8 +499,7 @@ var definitions = await _serviceFlux.ObtenirDefinitionsAsync(transaction);
 ### Démarrer
 
 ```csharp
-using var connexion = _connectionFactory.Creer();
-using var transaction = connexion.BeginTransaction();
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 var variables = new Dictionary<string, object?>
 {
@@ -400,25 +510,21 @@ var variables = new Dictionary<string, object?>
 long idInstance = await _serviceFlux.DemarrerAsync(
     cleDefinition:      "approbation-commande",
     aggregateId:        42L,
-    variablesInitiales: variables,
-    transaction:        transaction);
-
-transaction.Commit();
+    variablesInitiales: variables);
 ```
 
 ### Obtenir l'état d'une instance
 
 ```csharp
 // Par ID d'instance
-var instance = await _serviceFlux.ObtenirAsync(idInstance, transaction);
+var instance = await _serviceFlux.ObtenirAsync(idInstance);
 
 // Par agrégat (retourne null si aucune instance active)
 var instance = await _serviceFlux.ObtenirParAggregateAsync(
-    "approbation-commande", aggregateId: 42L, transaction);
+    "approbation-commande", aggregateId: 42L);
 
 // Recherche par valeur de variable
-var instances = await _serviceFlux.RechercherParVariableAsync(
-    "statut", "EnAttente", transaction);
+var instances = await _serviceFlux.RechercherParVariableAsync("statut", "EnAttente");
 ```
 
 **Statuts possibles d'une instance :**
@@ -437,16 +543,13 @@ var instances = await _serviceFlux.RechercherParVariableAsync(
 Lorsqu'une instance est suspendue sur un nœud interactif (après qu'un utilisateur a traité la tâche), appelez `TerminerEtapeAsync` :
 
 ```csharp
-using var connexion = _connectionFactory.Creer();
-using var transaction = connexion.BeginTransaction();
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // Optionnel : écrire le résultat de la tâche dans les variables avant de reprendre
-await _serviceFlux.ModifierVariableAsync(idInstance, "statut", "Approuvee", transaction);
+await _serviceFlux.ModifierVariableAsync(idInstance, "statut", "Approuvee");
 
 // Reprendre l'exécution (exécute la CommandePost si définie, ferme la tâche externe)
-await _serviceFlux.TerminerEtapeAsync(idInstance, transaction);
-
-transaction.Commit();
+await _serviceFlux.TerminerEtapeAsync(idInstance);
 ```
 
 ---
@@ -459,24 +562,21 @@ Les signaux permettent de débloquer une ou plusieurs instances suspendues sur u
 
 ```csharp
 await _serviceFlux.EnvoyerSignalAsync(
-    nomSignal:   "PaiementRecu",
-    transaction: transaction,
-    idInstance:  idInstance);
+    nomSignal:  "PaiementRecu",
+    idInstance: idInstance);
 ```
 
 ### Signal broadcast (toutes les instances en attente de ce signal)
 
 ```csharp
-await _serviceFlux.EnvoyerSignalAsync(
-    nomSignal:   "ValidationLot",
-    transaction: transaction);
+await _serviceFlux.EnvoyerSignalAsync("ValidationLot");
 // idInstance omis → toutes les instances attendant "ValidationLot" sont débloquées
 ```
 
 ### Vérifier les signaux attendus par une instance
 
 ```csharp
-var signaux = await _serviceFlux.ObtenirSignauxEnAttenteAsync(idInstance, transaction);
+var signaux = await _serviceFlux.ObtenirSignauxEnAttenteAsync(idInstance);
 // Retourne ex : ["PaiementRecu", "ConfirmationLivraison"]
 ```
 
@@ -490,21 +590,15 @@ Le réveil des instances suspendues sur un `NoeudAttenteTemps` est **entièremen
 
 ```csharp
 // Exécuté périodiquement (ex : toutes les minutes)
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
 public async Task ReveilllerInstancesEchuesAsync()
 {
-    using var connexion = _connectionFactory.Creer();
-    using var transaction = connexion.BeginTransaction();
-
-    var instancesEchues = await _serviceFlux.ObtenirInstancesEchuesAsync(
-        dateReference: DateTime.UtcNow,
-        transaction:   transaction);
+    var instancesEchues = await _serviceFlux.ObtenirInstancesEchuesAsync(DateTime.UtcNow);
 
     foreach (var instance in instancesEchues)
     {
-        await _serviceFlux.ReprendreAttenteTempsAsync(instance.IdInstance, transaction);
+        await _serviceFlux.ReprendreAttenteTempsAsync(instance.IdInstance);
     }
-
-    transaction.Commit();
 }
 ```
 
@@ -539,8 +633,7 @@ var toutes = contexte.Variables.ObtenirToutes();
 await _serviceFlux.ModifierVariableAsync(
     idInstance:  idInstance,
     nomVariable: "priorite",
-    valeur:      "Haute",
-    transaction: transaction);
+    valeur:      "Haute");
 ```
 
 ---
@@ -550,7 +643,7 @@ await _serviceFlux.ModifierVariableAsync(
 Chaque transition de l'instance génère automatiquement un événement d'audit.
 
 ```csharp
-var historique = await _serviceFlux.ObtenirHistoriqueAsync(idInstance, transaction);
+var historique = await _serviceFlux.ObtenirHistoriqueAsync(idInstance);
 
 foreach (var evenement in historique)
 {
@@ -580,17 +673,17 @@ foreach (var evenement in historique)
 La migration permet de faire passer des instances actives vers une nouvelle version publiée d'une définition, sans interruption.
 
 ```csharp
+// IDbConnection est fourni via le scope Autofac (voir §3.1)
+
 // Migrer une seule instance
 var resultat = await _serviceMigration.MigrerAsync(
-    idInstance:    idInstance,
-    versionCible:  2,
-    transaction:   transaction);
+    idInstance:   idInstance,
+    versionCible: 2);
 
 // Migrer toutes les instances actives/suspendues d'une définition
 var resultats = await _serviceMigration.MigrerToutesAsync(
     cleDefinition: "approbation-commande",
-    versionCible:  2,
-    transaction:   transaction);
+    versionCible:  2);
 ```
 
 ### Mapping de nœuds (si des nœuds ont été renommés ou supprimés)
@@ -604,7 +697,6 @@ var mapping = new Dictionary<string, string>
 var resultat = await _serviceMigration.MigrerAsync(
     idInstance:    idInstance,
     versionCible:  2,
-    transaction:   transaction,
     mappingNoeuds: mapping);
 ```
 
@@ -629,11 +721,20 @@ var resultat = await _serviceMigration.MigrerAsync(
 Le moteur **ne committe et ne rollbacke jamais**. En cas d'exception, votre application est responsable du rollback :
 
 ```csharp
+// Le moteur ne committe et ne rollbacke jamais — c'est la responsabilité de l'application.
 using var connexion = _connectionFactory.Creer();
 using var transaction = connexion.BeginTransaction();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion)
+     .As<IDbConnection>()
+     .ExternallyOwned());
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+
 try
 {
-    await _serviceFlux.DemarrerAsync("approbation-commande", aggregateId, variables, transaction);
+    await serviceFlux.DemarrerAsync("approbation-commande", aggregateId, variables);
     transaction.Commit();
 }
 catch (Exception ex)

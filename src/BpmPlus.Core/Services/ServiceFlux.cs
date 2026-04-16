@@ -10,7 +10,6 @@ namespace BpmPlus.Core.Services;
 
 public class ServiceFlux : IServiceFlux
 {
-    private readonly IDbSession _session;
     private readonly IRepositoryDefinition _repoDefinition;
     private readonly IRepositoryInstance _repoInstance;
     private readonly IRepositoryVariable _repoVariable;
@@ -23,7 +22,6 @@ public class ServiceFlux : IServiceFlux
     private readonly ILogger<ServiceFlux> _logger;
 
     public ServiceFlux(
-        IDbSession session,
         IRepositoryDefinition repoDefinition,
         IRepositoryInstance repoInstance,
         IRepositoryVariable repoVariable,
@@ -35,7 +33,6 @@ public class ServiceFlux : IServiceFlux
         ExecuteurNoeudAttenteSignal executeurAttenteSignal,
         ILogger<ServiceFlux> logger)
     {
-        _session = session;
         _repoDefinition = repoDefinition;
         _repoInstance = repoInstance;
         _repoVariable = repoVariable;
@@ -103,7 +100,7 @@ public class ServiceFlux : IServiceFlux
         var accesseur = new AccesseurVariables(variables);
         var contexte = new ContexteExecution(
             idInstance, cleDefinition, definition.Version,
-            aggregateId, _session, accesseur, ct);
+            aggregateId, accesseur, ct);
 
         await _moteur.ExecuterDepuisDebutAsync(definition, instance, contexte, ct);
 
@@ -150,7 +147,7 @@ public class ServiceFlux : IServiceFlux
         var accesseur = new AccesseurVariables(variables);
         var contexte = new ContexteExecution(
             idInstance, instance.CleDefinition, instance.VersionDefinition,
-            instance.AggregateId, _session, accesseur, ct);
+            instance.AggregateId, accesseur, ct);
 
         var idTacheExterne = await ExtraireIdTacheExterneAsync(idInstance, ct);
 
@@ -200,7 +197,7 @@ public class ServiceFlux : IServiceFlux
         var accesseur = new AccesseurVariables(variables);
         var contexte = new ContexteExecution(
             idInstance, instance.CleDefinition, instance.VersionDefinition,
-            instance.AggregateId, _session, accesseur, ct);
+            instance.AggregateId, accesseur, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
@@ -328,7 +325,7 @@ public class ServiceFlux : IServiceFlux
         var accesseur = new AccesseurVariables(variables);
         var contexte = new ContexteExecution(
             idInstance, instance.CleDefinition, instance.VersionDefinition,
-            instance.AggregateId, _session, accesseur, ct);
+            instance.AggregateId, accesseur, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
