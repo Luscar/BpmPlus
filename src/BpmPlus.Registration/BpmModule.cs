@@ -7,6 +7,7 @@ using BpmPlus.Core.Execution.Executeurs;
 using BpmPlus.Core.Persistance;
 using BpmPlus.Core.Services;
 using BpmPlus.Persistance.Oracle.Repositories;
+using BpmPlus.Persistance.Sqlite;
 using BpmPlus.Persistance.Sqlite.Repositories;
 
 namespace BpmPlus.Registration;
@@ -109,6 +110,8 @@ public class BpmModule : Autofac.Module
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
                 builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbConnection>(), prefixe))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
+                builder.RegisterType<SchemaCreator>()
+                    .AsSelf().InstancePerLifetimeScope();
                 break;
 
             case BackendPersistance.Oracle:

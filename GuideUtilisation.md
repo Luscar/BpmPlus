@@ -9,6 +9,7 @@
 1. [Vue d'ensemble](#1-vue-densemble)
 2. [Installation](#2-installation)
 3. [Configuration (Autofac)](#3-configuration-autofac)
+   - [3.2 Démarrage complet](#32-démarrage-complet--de-linstallation-au-premier-processus)
 4. [Implémenter les handlers](#4-implémenter-les-handlers)
 5. [Définir un processus](#5-définir-un-processus)
 6. [Gérer les définitions](#6-gérer-les-définitions)
@@ -120,6 +121,85 @@ transaction.Commit();
 ```
 
 > Dans une application web, ce pattern est généralement encapsulé dans un middleware ou une factory qui crée le scope pour chaque requête HTTP.
+
+### 3.2 Démarrage complet — de l'installation au premier processus
+
+Les quatre étapes ci-dessous constituent le setup minimal pour intégrer BpmPlus dans une application.
+
+#### Étape 1 — Enregistrer le module
+
+```csharp
+var builder = new ContainerBuilder();
+
+builder.RegisterModule(new BpmModule(config =>
+{
+    config.ScanHandlers(Assembly.GetExecutingAssembly());
+    config.UseSqlite("BPM");   // tests / développement
+    // config.UseOracle("BPM"); // production
+}));
+
+_container = builder.Build();
+```
+
+#### Étape 2 — Créer les tables (SQLite uniquement)
+
+En production Oracle, les tables sont créées via des scripts DDL fournis séparément. Pour SQLite, utilisez le `SchemaCreator` enregistré automatiquement par `UseSqlite` :
+
+```csharp
+using var connexion = new SqliteConnection("Data Source=bpm.db");
+connexion.Open();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+await scope.Resolve<SchemaCreator>().CreerToutesLesTablesAsync(connexion);
+```
+
+#### Étape 3 — Enregistrer et publier une définition
+
+À faire une fois par définition (ou à chaque nouvelle version) :
+
+```csharp
+var definition = new DefinitionProcessusBuilder("approbation-commande",
+        "Processus d'approbation", "valider-commande")
+    .AjouterNoeudMetier("valider-commande", "Valider la commande", vers: "notifier")
+    .AjouterNoeudMetier("notifier", "Notifier le résultat")
+    .Construire();
+
+using var connexion = _connectionFactory.Creer();
+using var transaction = connexion.BeginTransaction();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+await serviceFlux.SauvegarderDefinitionAsync(definition);
+await serviceFlux.PublierDefinitionAsync("approbation-commande");
+
+transaction.Commit();
+```
+
+#### Étape 4 — Démarrer une instance
+
+À chaque fois qu'un processus doit être lancé pour un agrégat :
+
+```csharp
+using var connexion = _connectionFactory.Creer();
+using var transaction = connexion.BeginTransaction();
+
+using var scope = _container.BeginLifetimeScope(b =>
+    b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
+
+var serviceFlux = scope.Resolve<IServiceFlux>();
+long idInstance = await serviceFlux.DemarrerAsync(
+    cleDefinition:      "approbation-commande",
+    aggregateId:        42L,
+    variablesInitiales: new Dictionary<string, object?> { ["montant"] = 1500m });
+
+transaction.Commit();
+```
+
+Les sections suivantes détaillent chaque aspect individuellement.
 
 ---
 
