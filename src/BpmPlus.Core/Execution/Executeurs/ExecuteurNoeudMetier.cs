@@ -34,7 +34,7 @@ public class ExecuteurNoeudMetier
 
         var parametres = await _resolveur.ResolveParametresAsync(noeud.Parametres, contexte, ct);
 
-        await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
+        await handler.ExecuterAsync(contexte.IdInstance, contexte.AggregateId, parametres, contexte);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
@@ -54,6 +54,6 @@ public class ExecuteurNoeudMetier
 
         var parametres = await _resolveur.ResolveParametresAsync(def.Parametres, contexte, ct);
 
-        await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
+        await handler.ExecuterAsync(contexte.IdInstance, contexte.AggregateId, parametres, contexte);
     }
 }

@@ -11,6 +11,7 @@ namespace BpmPlus.ExempleClient.Handlers;
 public class EstCommandeApprouveeHandler : BpmHandlerQuery<EstCommandeApprouveeQuery, bool>
 {
     public override Task<bool> ExecuterAsync(
+        long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte)
@@ -18,7 +19,7 @@ public class EstCommandeApprouveeHandler : BpmHandlerQuery<EstCommandeApprouveeQ
         var statut = contexte.Variables.ObtenirOuDefaut<string>("statut");
         var approuvee = statut == "Approuvee";
 
-        Console.WriteLine($"  |   [Query]   EstCommandeApprouvee — commande #{aggregateId}, statut = {statut} → {approuvee}");
+        Console.WriteLine($"  |   [Query]   EstCommandeApprouvee — instance #{idInstance}, commande #{aggregateId}, statut = {statut} → {approuvee}");
 
         return Task.FromResult(approuvee);
     }

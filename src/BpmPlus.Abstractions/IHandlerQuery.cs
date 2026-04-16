@@ -17,6 +17,7 @@ public interface IBpmHandlerQuery
 public interface IBpmHandlerQuery<TResultat> : IBpmHandlerQuery
 {
     Task<TResultat> ExecuterAsync(
+        long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte);
@@ -60,6 +61,7 @@ public abstract class BpmHandlerQuery<TQuery, TResultat> : IBpmHandlerQuery<TQue
     public string NomQuery => _nomQuery;
 
     public abstract Task<TResultat> ExecuterAsync(
+        long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte);

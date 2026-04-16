@@ -15,6 +15,7 @@ public interface IBpmHandlerCommande
     string NomCommande { get; }
 
     Task ExecuterAsync(
+        long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte);
@@ -58,6 +59,7 @@ public abstract class BpmHandlerCommande<TCommande> : IBpmHandlerCommande<TComma
     public string NomCommande => _nomCommande;
 
     public abstract Task ExecuterAsync(
+        long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte);

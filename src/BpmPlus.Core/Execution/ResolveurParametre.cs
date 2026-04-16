@@ -143,7 +143,7 @@ public class ResolveurParametre
             throw new InvalidOperationException($"Le handler '{sq.NomQuery}' n'implémente pas IBpmHandlerQuery<T>.");
 
         var methode = interfaceType.GetMethod("ExecuterAsync")!;
-        var tache = (Task)methode.Invoke(handler, [contexte.AggregateId, parametres, contexte])!;
+        var tache = (Task)methode.Invoke(handler, [contexte.IdInstance, contexte.AggregateId, parametres, contexte])!;
         await tache;
         var resultProperty = tache.GetType().GetProperty("Result");
         return resultProperty?.GetValue(tache);
@@ -160,6 +160,6 @@ public class ResolveurParametre
             ? await ResolveParametresAsync(cq.Parametres, contexte, ct)
             : (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>();
 
-        return await handler.ExecuterAsync(contexte.AggregateId, parametres, contexte);
+        return await handler.ExecuterAsync(contexte.IdInstance, contexte.AggregateId, parametres, contexte);
     }
 }
