@@ -19,3 +19,46 @@ public interface IBpmHandlerCommande
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte);
 }
+
+/// <summary>
+/// Handler typé pour une commande BPM spécifique.
+/// Hérite de IBpmHandlerCommande pour la compatibilité avec le moteur.
+/// Le NomCommande est déduit automatiquement de TCommande.
+/// </summary>
+public interface IBpmHandlerCommande<TCommande> : IBpmHandlerCommande
+    where TCommande : IBpmCommande, new()
+{
+}
+
+/// <summary>
+/// Classe de base abstraite pour les handlers de commandes typés.
+/// Fournit NomCommande depuis TCommande, sans duplication dans le handler.
+/// </summary>
+/// <example>
+/// public record ValiderCommandeCommand : IBpmCommande
+/// {
+///     public string NomCommande => "ValiderCommandeCommand";
+/// }
+///
+/// public class ValiderCommandeHandler : BpmHandlerCommande&lt;ValiderCommandeCommand&gt;
+/// {
+///     public override Task ExecuterAsync(long? aggregateId,
+///         IReadOnlyDictionary&lt;string, object?&gt; parametres, IContexteExecution contexte)
+///     {
+///         // logique métier
+///         return Task.CompletedTask;
+///     }
+/// }
+/// </example>
+public abstract class BpmHandlerCommande<TCommande> : IBpmHandlerCommande<TCommande>
+    where TCommande : IBpmCommande, new()
+{
+    private static readonly string _nomCommande = new TCommande().NomCommande;
+
+    public string NomCommande => _nomCommande;
+
+    public abstract Task ExecuterAsync(
+        long? aggregateId,
+        IReadOnlyDictionary<string, object?> parametres,
+        IContexteExecution contexte);
+}

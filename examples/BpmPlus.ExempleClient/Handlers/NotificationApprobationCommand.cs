@@ -1,16 +1,14 @@
 using BpmPlus.Abstractions;
+using BpmPlus.ExempleClient.Commands;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
 /// <summary>
 /// Handler du noeud final "notification-approbation".
-/// Convention : PascalCase("notification-approbation") + "Command" = "NotificationApprobationCommand".
 /// </summary>
-public class NotificationApprobationCommand : IBpmHandlerCommande
+public class NotificationApprobationHandler : BpmHandlerCommande<NotificationApprobationCommand>
 {
-    public string NomCommande => "NotificationApprobationCommand";
-
-    public Task ExecuterAsync(
+    public override Task ExecuterAsync(
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
         IContexteExecution contexte)

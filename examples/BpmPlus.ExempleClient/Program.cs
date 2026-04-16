@@ -80,9 +80,9 @@ var definition = new DefinitionProcessusBuilder(
         .AvecCommandePost("EnregistrerDecisionCommand")
         .Vers("decision-approbation"))
 
-    // Branchement XOR sur la variable "statut"
+    // Branchement XOR via query (EstCommandeApprouveeHandler lit la variable "statut")
     .AjouterNoeudDecision("decision-approbation", "Décision d'approbation", n => n
-        .SiEgal("statut", "Approuvee").Vers("notification-approbation")
+        .SiQuery("EstCommandeApprouveeQuery").Vers("notification-approbation")
         .ParDefaut().Vers("notification-refus"))
 
     // Nœuds finaux (EstFinale implicite car vers: omis)
