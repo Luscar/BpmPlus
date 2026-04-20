@@ -9,6 +9,7 @@ public abstract class OracleRepositoryBase
 {
     protected readonly string Prefixe;
     protected readonly IDbConnection Cn;
+    protected IDbTransaction? Tx => null;
 
     protected OracleRepositoryBase(IDbConnection connection, string prefixe)
     {
