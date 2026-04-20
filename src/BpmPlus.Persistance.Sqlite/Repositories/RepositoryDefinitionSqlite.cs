@@ -113,7 +113,7 @@ public class RepositoryDefinitionSqlite : SqliteRepositoryBase, IRepositoryDefin
             SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
             """);
 
-        return rows.Select(r => MapperDefinition(r)).ToList();
+        return rows.Select(r => (DefinitionProcessus)MapperDefinition(r)).ToList();
     }
 
     private static DefinitionProcessus MapperDefinition(dynamic row)
