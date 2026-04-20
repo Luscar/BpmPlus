@@ -1,15 +1,12 @@
 using BpmPlus.Abstractions;
-using BpmPlus.ExempleClient.Commands;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
-/// <summary>
-/// Handler du noeud "valider-commande".
-/// BpmHandlerCommande&lt;T&gt; fournit NomCommande depuis ValiderCommandeCommand automatiquement.
-/// </summary>
-public class ValiderCommandeHandler : BpmHandlerCommande<ValiderCommandeCommand>
+public class ValiderCommandeHandler : IBpmHandlerCommande
 {
-    public override Task ExecuterAsync(
+    public string NomCommande => "ValiderCommandeCommand";
+
+    public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,

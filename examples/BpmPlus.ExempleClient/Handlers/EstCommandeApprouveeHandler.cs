@@ -1,16 +1,12 @@
 using BpmPlus.Abstractions;
-using BpmPlus.ExempleClient.Queries;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
-/// <summary>
-/// Handler de la query "EstCommandeApprouveeQuery".
-/// Utilisé dans le noeud de décision "decision-approbation" via SiQuery.
-/// BpmHandlerQuery&lt;T, TResultat&gt; fournit NomQuery depuis EstCommandeApprouveeQuery automatiquement.
-/// </summary>
-public class EstCommandeApprouveeHandler : BpmHandlerQuery<EstCommandeApprouveeQuery, bool>
+public class EstCommandeApprouveeHandler : IBpmHandlerQuery<bool>
 {
-    public override Task<bool> ExecuterAsync(
+    public string NomQuery => "EstCommandeApprouveeQuery";
+
+    public Task<bool> ExecuterAsync(
         long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,

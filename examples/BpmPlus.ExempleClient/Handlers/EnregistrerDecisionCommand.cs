@@ -1,16 +1,12 @@
 using BpmPlus.Abstractions;
-using BpmPlus.ExempleClient.Commands;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
-/// <summary>
-/// Handler de la CommandePost du noeud interactif "approbation-responsable".
-/// Exécuté dans la même transaction que la reprise, après que l'application
-/// a mis à jour la variable "statut" via ModifierVariableAsync.
-/// </summary>
-public class EnregistrerDecisionHandler : BpmHandlerCommande<EnregistrerDecisionCommand>
+public class EnregistrerDecisionHandler : IBpmHandlerCommande
 {
-    public override Task ExecuterAsync(
+    public string NomCommande => "EnregistrerDecisionCommand";
+
+    public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,
         IReadOnlyDictionary<string, object?> parametres,
