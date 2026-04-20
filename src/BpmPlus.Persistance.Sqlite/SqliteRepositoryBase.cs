@@ -10,6 +10,7 @@ public abstract class SqliteRepositoryBase
 {
     protected readonly string Prefixe;
     protected readonly IDbConnection Cn;
+    protected IDbTransaction? Tx => null;
 
     protected SqliteRepositoryBase(IDbConnection connection, string prefixe)
     {
