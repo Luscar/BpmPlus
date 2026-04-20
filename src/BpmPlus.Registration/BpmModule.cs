@@ -195,24 +195,6 @@ public class BpmModule : Autofac.Module
 
     private static string? GetNomCommande(Type type)
     {
-        // Nouveau pattern : IBpmHandlerCommande<TCommande> — lire NomCommande depuis TCommande (POCO sans dépendances)
-        var typedInterface = type.GetInterfaces()
-            .FirstOrDefault(i => i.IsGenericType &&
-                                 i.GetGenericTypeDefinition() == typeof(IBpmHandlerCommande<>));
-
-        if (typedInterface is not null)
-        {
-            var commandeType = typedInterface.GetGenericArguments()[0];
-            try
-            {
-                var commande = Activator.CreateInstance(commandeType);
-                var prop = commandeType.GetProperty("NomCommande");
-                return (string?)prop?.GetValue(commande);
-            }
-            catch { /* fall through */ }
-        }
-
-        // Ancien pattern : IBpmHandlerCommande avec NomCommande directement sur le handler
         try
         {
             var prop = type.GetProperty("NomCommande");
@@ -229,28 +211,11 @@ public class BpmModule : Autofac.Module
 
     private static string? GetNomQuery(Type type)
     {
-        // Nouveau pattern : IBpmHandlerQuery<TQuery, TResultat> — lire NomQuery depuis TQuery (POCO sans dépendances)
-        var typedInterface2 = type.GetInterfaces()
-            .FirstOrDefault(i => i.IsGenericType &&
-                                 i.GetGenericTypeDefinition() == typeof(IBpmHandlerQuery<,>));
-
-        if (typedInterface2 is not null)
-        {
-            var queryType = typedInterface2.GetGenericArguments()[0];
-            try
-            {
-                var query = Activator.CreateInstance(queryType);
-                var prop = queryType.GetProperty("NomQuery");
-                return (string?)prop?.GetValue(query);
-            }
-            catch { /* fall through */ }
-        }
-
-        // Ancien pattern : IBpmHandlerQuery<TResultat> avec NomQuery directement sur le handler
         try
         {
             var prop = type.GetProperty("NomQuery");
             if (prop is null) return null;
+
             var instance = Activator.CreateInstance(type);
             return instance is null ? null : (string?)prop.GetValue(instance);
         }
