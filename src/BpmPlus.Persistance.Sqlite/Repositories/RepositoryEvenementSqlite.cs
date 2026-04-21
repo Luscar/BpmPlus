@@ -72,6 +72,19 @@ public class RepositoryEvenementSqlite : SqliteRepositoryBase, IRepositoryEvenem
         return row is null ? null : MapperEvenement(row);
     }
 
+    public async Task<EvenementInstance?> ObtenirDernierParTypeAsync(
+        long idInstance, TypeEvenement type, CancellationToken ct = default)
+    {
+        var row = await Cn.QuerySingleOrDefaultAsync($"""
+            SELECT * FROM {T("EVENEMENT_INSTANCE")}
+            WHERE ID_INSTANCE = @IdInstance
+              AND TYPE_EVENEMENT = @TypeEvenement
+            ORDER BY ID DESC LIMIT 1
+            """, new { IdInstance = idInstance, TypeEvenement = type.ToString() });
+
+        return row is null ? null : MapperEvenement(row);
+    }
+
     private static EvenementInstance MapperEvenement(dynamic row) => new()
     {
         Id = (long)row.ID,

@@ -93,6 +93,15 @@ public interface IServiceBpm
         long idInstance,
         CancellationToken ct = default);
 
+    Task<string?> ObtenirLogonTacheActiveAsync(
+        long idInstance,
+        CancellationToken ct = default);
+
+    Task AssignerLogonAsync(
+        long idInstance,
+        string logon,
+        CancellationToken ct = default);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(

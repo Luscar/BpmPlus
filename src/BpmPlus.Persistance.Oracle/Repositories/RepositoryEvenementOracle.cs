@@ -59,6 +59,20 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
         return row is null ? null : MapperEvenement(row);
     }
 
+    public async Task<EvenementInstance?> ObtenirDernierParTypeAsync(
+        long idInstance, TypeEvenement type, CancellationToken ct = default)
+    {
+        var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
+            SELECT * FROM {T("EVENEMENT_INSTANCE")}
+            WHERE ID_INSTANCE = :IdInstance
+              AND TYPE_EVENEMENT = :TypeEvenement
+            ORDER BY ID DESC
+            FETCH FIRST 1 ROW ONLY
+            """), new { IdInstance = idInstance, TypeEvenement = type.ToString() });
+
+        return row is null ? null : MapperEvenement(row);
+    }
+
     private static EvenementInstance MapperEvenement(dynamic row) => new()
     {
         Id = Convert.ToInt64(row.ID),

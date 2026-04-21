@@ -36,16 +36,25 @@ public class ExecuteurNoeudInteractif
         }
 
         long? idTacheExterne = null;
+        string? logon = null;
         if (_gestionTache is not null)
         {
             idTacheExterne = await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
             _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée : {IdTache}", noeud.Id, idTacheExterne);
+
+            if (noeud.DefinitionTache.LogonAuto is not null)
+            {
+                await _gestionTache.AssignerTacheAsync(idTacheExterne.Value, noeud.DefinitionTache.LogonAuto, ct);
+                logon = noeud.DefinitionTache.LogonAuto;
+                _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
+            }
         }
 
         var detail = System.Text.Json.JsonSerializer.Serialize(new
         {
             idTacheExterne,
-            noeudId = noeud.Id
+            noeudId = noeud.Id,
+            logon
         });
 
         return new ResultatNoeud(TypeResultatNoeud.Suspendu, null, detail);
