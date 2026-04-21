@@ -83,6 +83,26 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
 
+    public async Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
+        string nomVariable, string valeurSerialisee, StatutInstance statut, CancellationToken ct = default)
+    {
+        var rows = await Cn.QueryAsync(OraParam($"""
+            SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
+            JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
+            WHERE v.NOM = :Nom AND v.VALEUR = :Valeur AND i.STATUT = :Statut
+            """), new { Nom = nomVariable, Valeur = valeurSerialisee, Statut = statut.ToString() });
+        return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
+    }
+
+    public async Task<IReadOnlyList<InstanceProcessus>> ObtenirParStatutAsync(
+        StatutInstance statut, CancellationToken ct = default)
+    {
+        var rows = await Cn.QueryAsync(OraParam($"""
+            SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE STATUT = :Statut
+            """), new { Statut = statut.ToString() });
+        return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
+    }
+
     public async Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync($"""

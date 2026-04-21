@@ -79,6 +79,9 @@ public class ServiceFlux : IServiceFlux
         var idInstance = await _repoInstance.CreerAsync(instance, ct);
         instance.Id = idInstance;
 
+        _logger.LogInformation("Instance {IdInstance} créée — processus '{Cle}' v{Version}, agrégat {AggId}",
+            idInstance, cleDefinition, definition.Version, aggregateId);
+
         // Persister les variables initiales
         var variables = variablesInitiales != null
             ? new Dictionary<string, object?>(variablesInitiales)
@@ -93,7 +96,7 @@ public class ServiceFlux : IServiceFlux
             TypeEvenement = TypeEvenement.DebutProcessus,
             Horodatage = maintenant,
             Resultat = ResultatEvenement.Succes,
-            Detail = $"Démarrage du processus '{cleDefinition}' v{definition.Version}"
+            Detail = $"Instance {idInstance} — processus '{cleDefinition}' v{definition.Version}, agrégat {aggregateId}"
         }, ct);
 
         // Construire le contexte et exécuter
@@ -123,6 +126,16 @@ public class ServiceFlux : IServiceFlux
         var valeurSerialisee = SerialiserValeur(valeur);
         return await _repoInstance.RechercherParVariableAsync(nomVariable, valeurSerialisee, ct);
     }
+
+    public async Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
+        string nomVariable, object valeur, StatutInstance statut, CancellationToken ct = default)
+    {
+        var valeurSerialisee = SerialiserValeur(valeur);
+        return await _repoInstance.RechercherParVariableAsync(nomVariable, valeurSerialisee, statut, ct);
+    }
+
+    public Task<IReadOnlyList<InstanceProcessus>> ObtenirInstancesSuspenduesAsync(CancellationToken ct = default)
+        => _repoInstance.ObtenirParStatutAsync(StatutInstance.Suspendue, ct);
 
     public Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(
         long idInstanceParent, CancellationToken ct = default)
@@ -299,11 +312,20 @@ public class ServiceFlux : IServiceFlux
     public Task<IReadOnlyList<DefinitionProcessus>> ObtenirDefinitionsAsync(CancellationToken ct = default)
         => _repoDefinition.ObtenirToutesAsync(ct);
 
+    // ── Tâches ────────────────────────────────────────────────────────────────
+
+    public Task<long?> ObtenirIdTacheActiveAsync(long idInstance, CancellationToken ct = default)
+        => ExtraireIdTacheExterneAsync(idInstance, ct);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     public Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(
         long idInstance, CancellationToken ct = default)
         => _repoEvenement.ObtenirParInstanceAsync(idInstance, ct);
+
+    public Task<EvenementInstance?> ObtenirDernierEvenementTacheAsync(
+        long idInstance, CancellationToken ct = default)
+        => _repoEvenement.ObtenirDernierSuspensionAsync(idInstance, ct);
 
     // ── Méthodes privées ──────────────────────────────────────────────────────
 
@@ -403,7 +425,7 @@ public class ServiceFlux : IServiceFlux
             instance.CleDefinition, instance.VersionDefinition, ct)
             ?? throw new DefinitionIntrouvableException(instance.CleDefinition, instance.VersionDefinition);
 
-    private async Task<string?> ExtraireIdTacheExterneAsync(long idInstance, CancellationToken ct)
+    private async Task<long?> ExtraireIdTacheExterneAsync(long idInstance, CancellationToken ct)
     {
         var derniereSuspension = await _repoEvenement.ObtenirDernierSuspensionAsync(idInstance, ct);
         if (derniereSuspension?.Detail is null) return null;
@@ -412,7 +434,10 @@ public class ServiceFlux : IServiceFlux
         {
             using var doc = JsonDocument.Parse(derniereSuspension.Detail);
             if (doc.RootElement.TryGetProperty("idTacheExterne", out var el))
-                return el.GetString();
+            {
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt64(out var id))
+                    return id;
+            }
         }
         catch (JsonException) { }
 

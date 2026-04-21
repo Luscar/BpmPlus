@@ -28,6 +28,15 @@ public interface IServiceFlux
         object valeur,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
+        string nomVariable,
+        object valeur,
+        StatutInstance statut,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<InstanceProcessus>> ObtenirInstancesSuspenduesAsync(
+        CancellationToken ct = default);
+
     Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(
         long idInstanceParent,
         CancellationToken ct = default);
@@ -78,9 +87,19 @@ public interface IServiceFlux
     Task<IReadOnlyList<DefinitionProcessus>> ObtenirDefinitionsAsync(
         CancellationToken ct = default);
 
+    // ── Tâches ────────────────────────────────────────────────────────────────
+
+    Task<long?> ObtenirIdTacheActiveAsync(
+        long idInstance,
+        CancellationToken ct = default);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(
+        long idInstance,
+        CancellationToken ct = default);
+
+    Task<EvenementInstance?> ObtenirDernierEvenementTacheAsync(
         long idInstance,
         CancellationToken ct = default);
 }

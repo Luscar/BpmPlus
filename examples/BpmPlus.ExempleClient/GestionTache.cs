@@ -9,14 +9,14 @@ namespace BpmPlus.ExempleClient;
 /// </summary>
 public class GestionTache : IGestionTache
 {
-    private static int _compteur;
+    private static long _compteur;
 
-    public Task<string> CreerTacheAsync(
+    public Task<long> CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
         CancellationToken ct = default)
     {
-        var idTache = (++_compteur).ToString();
+        var idTache = ++_compteur;
 
         Console.WriteLine($"  |   [GestionTache] Tâche créée #{idTache}");
         Console.WriteLine($"  |                  Titre       : {definitionTache.Titre}");
@@ -26,13 +26,13 @@ public class GestionTache : IGestionTache
         return Task.FromResult(idTache);
     }
 
-    public Task FermerTacheAsync(string idTacheExterne, CancellationToken ct = default)
+    public Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default)
     {
         Console.WriteLine($"  |   [GestionTache] Tâche #{idTacheExterne} fermée.");
         return Task.CompletedTask;
     }
 
-    public Task AssignerTacheAsync(string idTacheExterne, string assignee, CancellationToken ct = default)
+    public Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)
     {
         Console.WriteLine($"  |   [GestionTache] Tâche #{idTacheExterne} assignée à {assignee}.");
         return Task.CompletedTask;
