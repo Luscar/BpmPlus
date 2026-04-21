@@ -64,32 +64,31 @@ Console.WriteLine();
 
 AfficherSection("3/4", "Publication de la définition du processus");
 
-var definition = new DefinitionProcessusBuilder(
+var definition = new ProcessusBuilder(
         "approbation-commande",
         "Processus d'approbation de commande",
         "valider-commande")
 
     // Valide la commande et initialise la variable "statut" à "EnAttente"
-    .AjouterNoeudMetier("valider-commande", "Valider la commande",
-        vers: "approbation-responsable")
+    .Metier("valider-commande", "Valider la commande", "approbation-responsable")
 
     // Suspension : crée une tâche pour le responsable via IGestionTache
     // La CommandePost est exécutée dans la même transaction que la reprise
-    .AjouterNoeudInteractif("approbation-responsable", "Approbation responsable", n => n
-        .DefinirTache("Approuver la commande", "Veuillez approuver ou refuser la commande")
-        .AvecCommandePost("EnregistrerDecisionCommand")
+    .Interactif("approbation-responsable", "Approbation responsable", n => n
+        .Tache("Approuver la commande", "Veuillez approuver ou refuser la commande")
+        .CommandePost("EnregistrerDecisionCommand")
         .Vers("decision-approbation"))
 
     // Branchement XOR via query (EstCommandeApprouveeHandler lit la variable "statut")
-    .AjouterNoeudDecision("decision-approbation", "Décision d'approbation", n => n
+    .Decision("decision-approbation", "Décision d'approbation", n => n
         .SiQuery("EstCommandeApprouveeQuery").Vers("notification-approbation")
-        .ParDefaut().Vers("notification-refus"))
+        .Defaut().Vers("notification-refus"))
 
     // Nœuds finaux (EstFinale implicite car vers: omis)
-    .AjouterNoeudMetier("notification-approbation", "Notifier approbation")
-    .AjouterNoeudMetier("notification-refus", "Notifier refus")
+    .Metier("notification-approbation", "Notifier approbation")
+    .Metier("notification-refus", "Notifier refus")
 
-    .Construire();
+    .Build();
 
 {
     using var conn = OuvrirConnexion(BaseDeDonnees);
