@@ -4,7 +4,7 @@ namespace BpmPlus.Abstractions;
 /// Point d'entrée principal pour interagir avec le moteur BPM.
 /// La connexion de base de données est fournie via IDbConnection enregistré dans le conteneur IoC.
 /// </summary>
-public interface IServiceFlux
+public interface IServiceBpm
 {
     // ── Instances ─────────────────────────────────────────────────────────────
 
@@ -26,6 +26,15 @@ public interface IServiceFlux
     Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
         string nomVariable,
         object valeur,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(
+        string nomVariable,
+        object valeur,
+        StatutInstance statut,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<InstanceProcessus>> ObtenirInstancesSuspenduesAsync(
         CancellationToken ct = default);
 
     Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(
@@ -78,9 +87,19 @@ public interface IServiceFlux
     Task<IReadOnlyList<DefinitionProcessus>> ObtenirDefinitionsAsync(
         CancellationToken ct = default);
 
+    // ── Tâches ────────────────────────────────────────────────────────────────
+
+    Task<long?> ObtenirIdTacheActiveAsync(
+        long idInstance,
+        CancellationToken ct = default);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(
+        long idInstance,
+        CancellationToken ct = default);
+
+    Task<EvenementInstance?> ObtenirDernierEvenementTacheAsync(
         long idInstance,
         CancellationToken ct = default);
 }

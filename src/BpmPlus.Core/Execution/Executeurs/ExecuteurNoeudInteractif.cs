@@ -35,7 +35,7 @@ public class ExecuteurNoeudInteractif
             await _executeurCommande.ExecuterDefinitionCommandeAsync(noeud.CommandePre, contexte, ct);
         }
 
-        string? idTacheExterne = null;
+        long? idTacheExterne = null;
         if (_gestionTache is not null)
         {
             idTacheExterne = await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
@@ -54,7 +54,7 @@ public class ExecuteurNoeudInteractif
     /// <summary>Complétion de la tâche — exécute POST, ferme la tâche, reprend le flux.</summary>
     public async Task<ResultatNoeud> CompleterAsync(
         NoeudInteractif noeud,
-        string? idTacheExterne,
+        long? idTacheExterne,
         IContexteExecution contexte,
         CancellationToken ct)
     {

@@ -96,9 +96,9 @@ var definition = new ProcessusBuilder(
     using var scope = container.BeginLifetimeScope(b =>
         b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
 
-    var serviceFlux = scope.Resolve<IServiceFlux>();
-    await serviceFlux.SauvegarderDefinitionAsync(definition);
-    await serviceFlux.PublierDefinitionAsync("approbation-commande");
+    var serviceBpm = scope.Resolve<IServiceBpm>();
+    await serviceBpm.SauvegarderDefinitionAsync(definition);
+    await serviceBpm.PublierDefinitionAsync("approbation-commande");
     tx.Commit();
 }
 
@@ -168,7 +168,7 @@ static async Task ExecuterScenario(
         using var scope = container.BeginLifetimeScope(b =>
             b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
 
-        idInstance = await scope.Resolve<IServiceFlux>().DemarrerAsync(
+        idInstance = await scope.Resolve<IServiceBpm>().DemarrerAsync(
             "approbation-commande",
             commandeId,
             new Dictionary<string, object?> { ["montant"] = montant });
@@ -184,7 +184,7 @@ static async Task ExecuterScenario(
         using var scope = container.BeginLifetimeScope(b =>
             b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
 
-        var instance = await scope.Resolve<IServiceFlux>().ObtenirAsync(idInstance);
+        var instance = await scope.Resolve<IServiceBpm>().ObtenirAsync(idInstance);
         Console.WriteLine($"  |   > Statut             : {instance.Statut}");
         Console.WriteLine($"  |   > Noeud courant      : {instance.IdNoeudCourant}");
     }
@@ -199,9 +199,9 @@ static async Task ExecuterScenario(
         using var scope = container.BeginLifetimeScope(b =>
             b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
 
-        var serviceFlux = scope.Resolve<IServiceFlux>();
-        await serviceFlux.ModifierVariableAsync(idInstance, "statut", decision);
-        await serviceFlux.TerminerEtapeAsync(idInstance);
+        var serviceBpm = scope.Resolve<IServiceBpm>();
+        await serviceBpm.ModifierVariableAsync(idInstance, "statut", decision);
+        await serviceBpm.TerminerEtapeAsync(idInstance);
         tx.Commit();
     }
 
@@ -213,9 +213,9 @@ static async Task ExecuterScenario(
         using var scope = container.BeginLifetimeScope(b =>
             b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
 
-        var sf             = scope.Resolve<IServiceFlux>();
-        var instanceFinale = await sf.ObtenirAsync(idInstance);
-        var historique     = await sf.ObtenirHistoriqueAsync(idInstance);
+        var serviceBpm2    = scope.Resolve<IServiceBpm>();
+        var instanceFinale = await serviceBpm2.ObtenirAsync(idInstance);
+        var historique     = await serviceBpm2.ObtenirHistoriqueAsync(idInstance);
 
         Console.WriteLine($"  |   > Statut final       : {instanceFinale.Statut}");
         Console.WriteLine("  |");
