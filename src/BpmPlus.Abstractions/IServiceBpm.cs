@@ -4,7 +4,7 @@ namespace BpmPlus.Abstractions;
 /// Point d'entrée principal pour interagir avec le moteur BPM.
 /// La connexion de base de données est fournie via IDbConnection enregistré dans le conteneur IoC.
 /// </summary>
-public interface IServiceFlux
+public interface IServiceBpm
 {
     // ── Instances ─────────────────────────────────────────────────────────────
 

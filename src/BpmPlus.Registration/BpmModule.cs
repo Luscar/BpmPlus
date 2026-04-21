@@ -84,8 +84,8 @@ public class BpmModule : Autofac.Module
         .InstancePerLifetimeScope();
 
         // ── Services BPM ──────────────────────────────────────────────────────
-        builder.RegisterType<ServiceFlux>()
-            .As<IServiceFlux>()
+        builder.RegisterType<ServiceBpm>()
+            .As<IServiceBpm>()
             .InstancePerLifetimeScope();
 
         builder.RegisterType<ServiceMigration>()

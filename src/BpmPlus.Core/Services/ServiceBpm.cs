@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BpmPlus.Core.Services;
 
-public class ServiceFlux : IServiceFlux
+public class ServiceBpm : IServiceBpm
 {
     private readonly IRepositoryDefinition _repoDefinition;
     private readonly IRepositoryInstance _repoInstance;
@@ -19,9 +19,9 @@ public class ServiceFlux : IServiceFlux
     private readonly ExecuteurNoeudInteractif _executeurInteractif;
     private readonly ExecuteurNoeudAttenteTemps _executeurAttenteTemps;
     private readonly ExecuteurNoeudAttenteSignal _executeurAttenteSignal;
-    private readonly ILogger<ServiceFlux> _logger;
+    private readonly ILogger<ServiceBpm> _logger;
 
-    public ServiceFlux(
+    public ServiceBpm(
         IRepositoryDefinition repoDefinition,
         IRepositoryInstance repoInstance,
         IRepositoryVariable repoVariable,
@@ -31,7 +31,7 @@ public class ServiceFlux : IServiceFlux
         ExecuteurNoeudInteractif executeurInteractif,
         ExecuteurNoeudAttenteTemps executeurAttenteTemps,
         ExecuteurNoeudAttenteSignal executeurAttenteSignal,
-        ILogger<ServiceFlux> logger)
+        ILogger<ServiceBpm> logger)
     {
         _repoDefinition = repoDefinition;
         _repoInstance = repoInstance;
