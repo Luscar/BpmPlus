@@ -1,0 +1,308 @@
+<div class="page">
+
+  <!-- Fil d'Ariane -->
+  <nav class="breadcrumb">
+    <a routerLink="/instances" class="link">
+      <mat-icon>list_alt</mat-icon> Instances
+    </a>
+    <mat-icon class="sep">chevron_right</mat-icon>
+    @if (instance?.idInstanceParent) {
+      <a [routerLink]="['/instances', instance!.idInstanceParent]" class="link">
+        <mat-icon>arrow_upward</mat-icon> Parent #{{ instance!.idInstanceParent }}
+      </a>
+      <mat-icon class="sep">chevron_right</mat-icon>
+    }
+    <span>Instance #{{ id }}</span>
+  </nav>
+
+  @if (loading) {
+    <div class="center"><mat-spinner /></div>
+  } @else if (instance) {
+
+    <!-- En-tête -->
+    <div class="header">
+      <div class="header-left">
+        <h1 class="page-title">
+          Instance #{{ instance.id }}
+          <app-status-badge [statut]="instance.statut" />
+        </h1>
+        <div class="meta">
+          <span><mat-icon class="meta-icon">account_tree</mat-icon>
+            <a [routerLink]="['/definitions', instance.cleDefinition]" class="link">
+              {{ instance.cleDefinition }}
+            </a> v{{ instance.versionDefinition }}
+          </span>
+          <span><mat-icon class="meta-icon">fingerprint</mat-icon> Aggregate {{ instance.aggregateId }}</span>
+          <span><mat-icon class="meta-icon">schedule</mat-icon> Démarré {{ instance.dateDebut | date:'dd/MM/yyyy HH:mm' }}</span>
+          @if (instance.dateFin) {
+            <span><mat-icon class="meta-icon">check</mat-icon> Terminé {{ instance.dateFin | date:'dd/MM/yyyy HH:mm' }}</span>
+          }
+        </div>
+        @if (instance.idNoeudCourant) {
+          <div class="current-node">
+            <mat-icon>location_on</mat-icon>
+            Nœud courant : <code class="mono">{{ instance.idNoeudCourant }}</code>
+            @if (tache.logon) {
+              <span class="assignee"><mat-icon>person</mat-icon> {{ tache.logon }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="header-actions">
+        <button mat-icon-button (click)="charger()" matTooltip="Rafraîchir">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation enfants -->
+    @if (enfants.length > 0) {
+      <div class="children-nav">
+        <mat-icon>subdirectory_arrow_right</mat-icon>
+        <strong>Sous-instances :</strong>
+        @for (e of enfants; track e.id) {
+          <a [routerLink]="['/instances', e.id]" class="child-link">
+            <app-status-badge [statut]="e.statut" />
+            #{{ e.id }} — {{ e.cleDefinition }}
+          </a>
+        }
+      </div>
+    }
+
+    <mat-tab-group class="tabs" dynamicHeight>
+
+      <!-- Diagramme -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">schema</mat-icon> Diagramme
+        </ng-template>
+        <div class="tab-content">
+          @if (diagram) {
+            <mat-card class="diagram-card">
+              <mat-card-content>
+                <app-mermaid-diagram [diagram]="diagram" />
+              </mat-card-content>
+            </mat-card>
+            <p class="diagram-hint">
+              <mat-icon>info</mat-icon>
+              Le nœud <strong>rouge</strong> indique la position courante de l'instance.
+            </p>
+          } @else {
+            <p class="empty-msg">Définition de processus non disponible pour générer le diagramme.</p>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Variables -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">data_object</mat-icon>
+          Variables ({{ objectKeys(variables).length }})
+        </ng-template>
+        <div class="tab-content">
+          <div class="variables-grid">
+            @for (key of objectKeys(variables); track key) {
+              <mat-card class="var-card">
+                <mat-card-content>
+                  @if (editingVar === key) {
+                    <div class="var-edit">
+                      <mat-form-field appearance="outline" class="var-field">
+                        <mat-label>Valeur</mat-label>
+                        <input matInput [formControl]="varValCtrl" />
+                      </mat-form-field>
+                      <div class="var-edit-actions">
+                        <button mat-raised-button color="primary" (click)="enregistrerVariable()" [disabled]="actionLoading">
+                          <mat-icon>save</mat-icon> Enregistrer
+                        </button>
+                        <button mat-button (click)="editingVar = null">Annuler</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="var-display">
+                      <code class="var-key">{{ key }}</code>
+                      <span class="var-value">{{ variables[key] }}</span>
+                      <button mat-icon-button class="edit-var-btn" (click)="ouvrirEditionVar(key, variables[key])"
+                        matTooltip="Modifier" [disabled]="actionLoading">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </mat-card-content>
+              </mat-card>
+            }
+            @if (objectKeys(variables).length === 0) {
+              <p class="empty-msg">Aucune variable.</p>
+            }
+          </div>
+          <!-- Ajout de variable -->
+          <mat-card class="add-var-card">
+            <mat-card-header>
+              <mat-card-title>Ajouter / modifier une variable</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="add-var-form">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nom</mat-label>
+                  <input matInput [formControl]="varNomCtrl" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Valeur</mat-label>
+                  <input matInput [formControl]="varValCtrl" />
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="enregistrerVariable()"
+                  [disabled]="!varNomCtrl.valid || actionLoading">
+                  <mat-icon>save</mat-icon> Enregistrer
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- Actions manuelles -->
+      @if (isSuspendue) {
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">touch_app</mat-icon> Actions
+          </ng-template>
+          <div class="tab-content actions-panel">
+
+            <!-- Terminer une tâche interactive -->
+            @if (canTerminerEtape) {
+              <mat-card class="action-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar class="action-icon icon-interactif">person</mat-icon>
+                  <mat-card-title>Terminer la tâche interactive</mat-card-title>
+                  <mat-card-subtitle>Marque la tâche humaine comme complétée et reprend le processus.</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  @if (tache.logon) {
+                    <p>Assignée à : <strong>{{ tache.logon }}</strong></p>
+                  }
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-raised-button color="primary" (click)="terminerEtape()" [disabled]="actionLoading">
+                    <mat-icon>check_circle</mat-icon> Terminer l'étape
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            <!-- Assigner la tâche -->
+            @if (canTerminerEtape) {
+              <mat-card class="action-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar class="action-icon icon-interactif">assignment_ind</mat-icon>
+                  <mat-card-title>Assigner la tâche</mat-card-title>
+                  <mat-card-subtitle>Change l'utilisateur responsable de la tâche courante.</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <mat-form-field appearance="outline" class="action-field">
+                    <mat-label>Logon utilisateur</mat-label>
+                    <mat-icon matPrefix>person</mat-icon>
+                    <input matInput [formControl]="logonCtrl" placeholder="ex: alice.martin" />
+                  </mat-form-field>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-raised-button color="accent" (click)="assigner()"
+                    [disabled]="!logonCtrl.valid || actionLoading">
+                    <mat-icon>person_add</mat-icon> Assigner
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            <!-- Envoyer un signal -->
+            @if (canSignal) {
+              <mat-card class="action-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar class="action-icon icon-signal">notifications</mat-icon>
+                  <mat-card-title>Envoyer un signal</mat-card-title>
+                  <mat-card-subtitle>
+                    Signaux attendus :
+                    @for (s of signaux; track s) {
+                      <code class="mono">{{ s }}</code>
+                    }
+                  </mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <mat-form-field appearance="outline" class="action-field">
+                    <mat-label>Nom du signal</mat-label>
+                    <mat-icon matPrefix>notifications</mat-icon>
+                    <input matInput [formControl]="signalCtrl" placeholder="ex: badge-livre" />
+                  </mat-form-field>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-raised-button color="primary" (click)="envoyerSignal()"
+                    [disabled]="!signalCtrl.valid || actionLoading">
+                    <mat-icon>send</mat-icon> Envoyer le signal
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            <!-- Reprendre le timer -->
+            @if (canReprendreTimer) {
+              <mat-card class="action-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar class="action-icon icon-timer">timer_off</mat-icon>
+                  <mat-card-title>Reprendre l'attente temps</mat-card-title>
+                  <mat-card-subtitle>Force la reprise du processus en ignorant l'échéance restante.</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-actions>
+                  <button mat-raised-button color="warn" (click)="reprendreTimer()" [disabled]="actionLoading">
+                    <mat-icon>fast_forward</mat-icon> Reprendre maintenant
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+          </div>
+        </mat-tab>
+      }
+
+      <!-- Historique -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">history</mat-icon>
+          Historique ({{ historique.length }})
+        </ng-template>
+        <div class="tab-content">
+          <div class="timeline">
+            @for (ev of historique; track ev.id; let last = $last) {
+              <div class="timeline-item" [class]="resultatClass(ev.resultat ?? '')">
+                <div class="timeline-marker">
+                  <mat-icon>{{ typeEvenementIcon(ev.typeEvenement) }}</mat-icon>
+                </div>
+                <div class="timeline-content">
+                  <div class="ev-header">
+                    <strong>{{ typeEvenementLabel(ev.typeEvenement) }}</strong>
+                    @if (ev.nomNoeud) {
+                      <code class="mono">{{ ev.nomNoeud }}</code>
+                    }
+                    @if (ev.dureeMs) {
+                      <span class="ev-duration">{{ formatDuree(ev.dureeMs) }}</span>
+                    }
+                  </div>
+                  <div class="ev-time">{{ ev.horodatage | date:'dd/MM/yyyy HH:mm:ss.SSS' }}</div>
+                  @if (ev.detail) {
+                    <details class="ev-detail">
+                      <summary>Détail</summary>
+                      <pre>{{ ev.detail }}</pre>
+                    </details>
+                  }
+                </div>
+                @if (!last) { <div class="timeline-line"></div> }
+              </div>
+            }
+            @if (historique.length === 0) {
+              <p class="empty-msg">Aucun événement enregistré.</p>
+            }
+          </div>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  }
+</div>

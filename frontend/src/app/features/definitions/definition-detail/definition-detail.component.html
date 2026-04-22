@@ -1,0 +1,140 @@
+<div class="page">
+
+  <nav class="breadcrumb">
+    <a routerLink="/definitions" class="link">
+      <mat-icon>account_tree</mat-icon> Définitions
+    </a>
+    <mat-icon class="sep">chevron_right</mat-icon>
+    <span>{{ cle }}</span>
+  </nav>
+
+  @if (loading) {
+    <div class="center"><mat-spinner /></div>
+  } @else if (selected) {
+
+    <div class="header">
+      <div class="header-left">
+        <h1 class="page-title">{{ selected.nom }}</h1>
+        <div class="meta">
+          <code class="mono">{{ selected.cle }}</code>
+          <app-status-badge [statut]="selected.statut" />
+        </div>
+      </div>
+      <div class="header-actions">
+        @if (versions.length > 1) {
+          <div class="version-selector">
+            @for (v of versions; track v.version) {
+              <button mat-stroked-button
+                [class.active-version]="v.version === selected.version"
+                (click)="selectVersion(v)">
+                v{{ v.version }}
+              </button>
+            }
+          </div>
+        }
+        @if (selected.statut === 'Brouillon') {
+          <button mat-raised-button color="primary" (click)="publier()" [disabled]="publishing">
+            <mat-icon>publish</mat-icon>
+            Publier
+          </button>
+        }
+        <button mat-stroked-button color="accent"
+          [routerLink]="['/instances']" [queryParams]="{ cleDefinition: cle }">
+          <mat-icon>list_alt</mat-icon>
+          Instances
+        </button>
+      </div>
+    </div>
+
+    <mat-tab-group class="tabs">
+
+      <!-- Diagramme Mermaid -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">schema</mat-icon> Diagramme
+        </ng-template>
+        <div class="tab-content">
+          <mat-card class="diagram-card">
+            <mat-card-content>
+              <app-mermaid-diagram [diagram]="diagram" />
+            </mat-card-content>
+          </mat-card>
+          <div class="legend">
+            <span class="legend-item metier"><mat-icon>settings</mat-icon> Métier</span>
+            <span class="legend-item interactif"><mat-icon>person</mat-icon> Tâche humaine</span>
+            <span class="legend-item decision"><mat-icon>call_split</mat-icon> Décision</span>
+            <span class="legend-item attenteTemps"><mat-icon>timer</mat-icon> Attente temps</span>
+            <span class="legend-item attenteSignal"><mat-icon>notifications</mat-icon> Attente signal</span>
+            <span class="legend-item sousProcessus"><mat-icon>account_tree</mat-icon> Sous-processus</span>
+            <span class="legend-item final"><mat-icon>stop_circle</mat-icon> Final</span>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Liste des nœuds -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">list</mat-icon> Nœuds ({{ selected.noeuds.length }})
+        </ng-template>
+        <div class="tab-content nodes-list">
+          @for (noeud of selected.noeuds; track noeud.id) {
+            <mat-card class="node-card" [class.node-start]="noeud.id === selected.noeudDebut" [class.node-final]="noeud.estFinale">
+              <mat-card-content>
+                <div class="node-header">
+                  <mat-icon [class]="'node-icon-' + noeud.type">{{ nodeTypeIcon(noeud.type) }}</mat-icon>
+                  <div>
+                    <div class="node-name">{{ noeud.nom || noeud.id }}</div>
+                    <div class="node-meta">
+                      <code class="mono">{{ noeud.id }}</code>
+                      <span class="node-type-label">{{ nodeTypeLabel(noeud.type) }}</span>
+                      @if (noeud.id === selected.noeudDebut) {
+                        <span class="badge-start">Début</span>
+                      }
+                      @if (noeud.estFinale) {
+                        <span class="badge-final">Final</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                @if (noeud.definitionTache) {
+                  <div class="node-extra">
+                    <mat-icon>task_alt</mat-icon>
+                    {{ noeud.definitionTache.titre }}
+                    @if (noeud.definitionTache.description) {
+                      — {{ noeud.definitionTache.description }}
+                    }
+                  </div>
+                }
+                @if (noeud.nomSignal) {
+                  <div class="node-extra">
+                    <mat-icon>notifications</mat-icon>
+                    Signal attendu : <code class="mono">{{ noeud.nomSignal }}</code>
+                  </div>
+                }
+                @if (noeud.cleDefinition) {
+                  <div class="node-extra">
+                    <mat-icon>account_tree</mat-icon>
+                    Sous-processus :
+                    <a [routerLink]="['/definitions', noeud.cleDefinition]" class="link">
+                      {{ noeud.cleDefinition }} v{{ noeud.version }}
+                    </a>
+                  </div>
+                }
+                @if (noeud.fluxSortants.length > 0) {
+                  <div class="node-flows">
+                    @for (flux of noeud.fluxSortants; track flux.vers) {
+                      <span class="flow-chip">
+                        <mat-icon>arrow_forward</mat-icon>{{ flux.vers }}
+                      </span>
+                    }
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  }
+</div>

@@ -1,0 +1,92 @@
+<div class="dashboard">
+  <h1 class="page-title">
+    <mat-icon>dashboard</mat-icon>
+    Tableau de bord
+  </h1>
+
+  @if (loading) {
+    <div class="center"><mat-spinner /></div>
+  } @else if (error) {
+    <p class="error-msg">{{ error }}</p>
+  } @else if (stats) {
+
+    <section class="section">
+      <h2 class="section-title">Définitions de processus</h2>
+      <div class="cards-row">
+
+        <mat-card class="stat-card card-blue" routerLink="/definitions">
+          <mat-card-content>
+            <mat-icon class="stat-icon">account_tree</mat-icon>
+            <div class="stat-value">{{ stats.definitions.total }}</div>
+            <div class="stat-label">Total</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-green" [routerLink]="['/definitions']">
+          <mat-card-content>
+            <mat-icon class="stat-icon">verified</mat-icon>
+            <div class="stat-value">{{ stats.definitions.publiees }}</div>
+            <div class="stat-label">Publiées</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-grey" [routerLink]="['/definitions']">
+          <mat-card-content>
+            <mat-icon class="stat-icon">edit_note</mat-icon>
+            <div class="stat-value">{{ stats.definitions.brouillons }}</div>
+            <div class="stat-label">Brouillons</div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Instances en cours</h2>
+      <div class="cards-row">
+
+        <mat-card class="stat-card card-teal" [routerLink]="['/instances']" [queryParams]="{ statut: 'Active' }">
+          <mat-card-content>
+            <mat-icon class="stat-icon">play_circle</mat-icon>
+            <div class="stat-value">{{ stats.instances.actives }}</div>
+            <div class="stat-label">Actives</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-orange" [routerLink]="['/instances']" [queryParams]="{ statut: 'Suspendue' }">
+          <mat-card-content>
+            <mat-icon class="stat-icon">pause_circle</mat-icon>
+            <div class="stat-value">{{ stats.instances.suspendues }}</div>
+            <div class="stat-label">Suspendues</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-red" [routerLink]="['/instances']" [queryParams]="{ statut: 'EnErreur' }">
+          <mat-card-content>
+            <mat-icon class="stat-icon">error</mat-icon>
+            <div class="stat-value">{{ stats.instances.enErreur }}</div>
+            <div class="stat-label">En erreur</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-grey" [routerLink]="['/instances']" [queryParams]="{ statut: 'Terminee' }">
+          <mat-card-content>
+            <mat-icon class="stat-icon">check_circle</mat-icon>
+            <div class="stat-value">{{ stats.instances.terminees }}</div>
+            <div class="stat-label">Terminées</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card card-purple" routerLink="/instances/echues">
+          <mat-card-content>
+            <mat-icon class="stat-icon">timer_off</mat-icon>
+            <div class="stat-value">{{ stats.instances.echues }}</div>
+            <div class="stat-label">Échues</div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </section>
+
+  }
+</div>

@@ -1,0 +1,121 @@
+<div class="page">
+  <h1 class="page-title">
+    <mat-icon>list_alt</mat-icon>
+    Instances de processus
+  </h1>
+
+  <div class="filters">
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Statut</mat-label>
+      <mat-select [formControl]="statutCtrl">
+        @for (s of statuts; track s.value) {
+          <mat-option [value]="s.value">{{ s.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Clé de définition</mat-label>
+      <input matInput [formControl]="definitionCtrl" placeholder="ex: commande-achat" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <button mat-icon-button (click)="charger()" matTooltip="Rafraîchir">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="center"><mat-spinner /></div>
+  } @else {
+    <mat-card>
+      <mat-card-content>
+        <table mat-table [dataSource]="instances" class="full-width">
+
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let i">
+              <code class="mono">{{ i.id }}</code>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="definition">
+            <th mat-header-cell *matHeaderCellDef>Définition</th>
+            <td mat-cell *matCellDef="let i">
+              <a [routerLink]="['/definitions', i.cleDefinition]" class="link" (click)="$event.stopPropagation()">
+                {{ i.cleDefinition }}
+              </a>
+              <span class="version-tag">v{{ i.versionDefinition }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let i">
+              <app-status-badge [statut]="i.statut" />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="noeud">
+            <th mat-header-cell *matHeaderCellDef>Nœud courant</th>
+            <td mat-cell *matCellDef="let i">
+              @if (i.idNoeudCourant) {
+                <code class="mono">{{ i.idNoeudCourant }}</code>
+              } @else {
+                <span class="dim">—</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="parent">
+            <th mat-header-cell *matHeaderCellDef>Parent</th>
+            <td mat-cell *matCellDef="let i">
+              @if (i.idInstanceParent) {
+                <a [routerLink]="['/instances', i.idInstanceParent]" class="link" (click)="$event.stopPropagation()">
+                  <mat-icon class="tiny-icon">arrow_upward</mat-icon>{{ i.idInstanceParent }}
+                </a>
+              } @else {
+                <span class="dim">—</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateDebut">
+            <th mat-header-cell *matHeaderCellDef>Début</th>
+            <td mat-cell *matCellDef="let i">{{ i.dateDebut | date:'dd/MM HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateMaj">
+            <th mat-header-cell *matHeaderCellDef>Mise à jour</th>
+            <td mat-cell *matCellDef="let i">{{ i.dateMaj | date:'dd/MM HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let i">
+              <button mat-icon-button color="primary"
+                [routerLink]="['/instances', i.id]"
+                matTooltip="Voir le détail"
+                (click)="$event.stopPropagation()">
+                <mat-icon>open_in_new</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            class="clickable-row"
+            (click)="naviguerInstance(row.id)"></tr>
+
+        </table>
+
+        @if (instances.length === 0) {
+          <div class="empty">
+            <mat-icon>list_alt</mat-icon>
+            <p>Aucune instance trouvée.</p>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
