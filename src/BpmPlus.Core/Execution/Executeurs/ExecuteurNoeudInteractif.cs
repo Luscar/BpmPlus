@@ -77,7 +77,7 @@ public class ExecuteurNoeudInteractif
         }
 
         if (_gestionTache is not null && idTacheExterne is not null)
-            await _gestionTache.FermerTacheAsync(idTacheExterne, ct);
+            await _gestionTache.FermerTacheAsync(idTacheExterne.Value, ct);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
