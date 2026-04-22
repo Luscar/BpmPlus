@@ -20,13 +20,15 @@
     "@angular/platform-browser": "^18.2.0",
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
-    "bpmn-js": "^17.11.1",
+    "mermaid": "11.12.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"
   },
   "overrides": {
-    "postcss": "8.5.8"
+    "postcss": "8.5.8",
+    "mermaid": "11.12.3",
+    "chevrotain": "12.0.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.21",
