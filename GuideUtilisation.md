@@ -1,6 +1,6 @@
 # Guide d'utilisation — BpmPlus (application cliente)
 
-> Version : 1.2 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
+> Version : 1.3 — Destiné aux développeurs intégrant BpmPlus dans une application .NET 8
 
 ---
 
@@ -92,7 +92,7 @@ var container = builder.Build();
 ```
 
 Le module enregistre automatiquement :
-- `IServiceFlux` — service principal (scoped)
+- `IServiceBpm` — service principal (scoped)
 - `IServiceMigration` — migration de versions (scoped)
 - Tous les handlers trouvés via `ScanHandlers`
 
@@ -112,10 +112,10 @@ using var scope = _container.BeginLifetimeScope(b =>
      .As<IDbConnection>()
      .ExternallyOwned());  // BpmPlus ne dispose pas la connexion
 
-var serviceFlux = scope.Resolve<IServiceFlux>();
+var serviceBpm = scope.Resolve<IServiceBpm>();
 
 // Appels au service — aucun paramètre de transaction requis
-await serviceFlux.DemarrerAsync("approbation-commande", aggregateId, variables);
+await serviceBpm.DemarrerAsync("approbation-commande", aggregateId, variables);
 
 transaction.Commit();
 ```
@@ -172,9 +172,9 @@ using var transaction = connexion.BeginTransaction();
 using var scope = _container.BeginLifetimeScope(b =>
     b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
 
-var serviceFlux = scope.Resolve<IServiceFlux>();
-await serviceFlux.SauvegarderDefinitionAsync(definition);
-await serviceFlux.PublierDefinitionAsync("approbation-commande");
+var serviceBpm = scope.Resolve<IServiceBpm>();
+await serviceBpm.SauvegarderDefinitionAsync(definition);
+await serviceBpm.PublierDefinitionAsync("approbation-commande");
 
 transaction.Commit();
 ```
@@ -190,8 +190,8 @@ using var transaction = connexion.BeginTransaction();
 using var scope = _container.BeginLifetimeScope(b =>
     b.RegisterInstance(connexion).As<IDbConnection>().ExternallyOwned());
 
-var serviceFlux = scope.Resolve<IServiceFlux>();
-long idInstance = await serviceFlux.DemarrerAsync(
+var serviceBpm = scope.Resolve<IServiceBpm>();
+long idInstance = await serviceBpm.DemarrerAsync(
     cleDefinition:      "approbation-commande",
     aggregateId:        42L,
     variablesInitiales: new Dictionary<string, object?> { ["montant"] = 1500m });
@@ -291,7 +291,7 @@ Requis uniquement si votre processus contient des nœuds interactifs.
 ```csharp
 public class MaGestionTache : IGestionTache
 {
-    public async Task<string> CreerTacheAsync(
+    public async Task<long> CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
         CancellationToken ct = default)
@@ -301,20 +301,21 @@ public class MaGestionTache : IGestionTache
         {
             Titre       = definitionTache.Titre,
             Description = definitionTache.Description,
+            Categorie   = definitionTache.Categorie,
             AggregateId = instance.AggregateId
         }, ct);
 
-        return idTache.ToString();
+        return idTache;
     }
 
-    public async Task FermerTacheAsync(string idTacheExterne, CancellationToken ct = default)
+    public async Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default)
     {
-        await _tacheService.FermerAsync(long.Parse(idTacheExterne), ct);
+        await _tacheService.FermerAsync(idTacheExterne, ct);
     }
 
-    public async Task AssignerTacheAsync(string idTacheExterne, string assignee, CancellationToken ct = default)
+    public async Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)
     {
-        await _tacheService.AssignerAsync(long.Parse(idTacheExterne), assignee, ct);
+        await _tacheService.AssignerAsync(idTacheExterne, assignee, ct);
     }
 }
 ```
@@ -367,6 +368,7 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
 | `AjouterNoeudMetier("id", "nom", n => n...)` | Lambda pour paramètres additionnels |
 | `.CommandeNommee("NomExplicite")` | Surcharge le nom de commande (déroge à la convention) |
 | `.DefinirTache("titre", "description")` | Raccourci sans sous-builder |
+| `.LogonAuto("logon")` | Assignation automatique du logon à l'arrivée sur le nœud interactif |
 | `.SortiesVariables("a", "b")` | Plusieurs variables de sortie en un appel |
 | `.SiEgal("x", val)` | `SiVariable(..., Operateur.Egal, ...)` |
 | `.SiDifferent("x", val)` | `SiVariable(..., Operateur.Different, ...)` |
@@ -481,13 +483,13 @@ Les définitions suivent le cycle : **Brouillon → Publiée (immuable)**.
 // IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // 1. Sauvegarder un brouillon (peut être écrasé)
-await _serviceFlux.SauvegarderDefinitionAsync(definition);
+await _serviceBpm.SauvegarderDefinitionAsync(definition);
 
 // 2. Publier (rend la définition immuable et utilisable)
-await _serviceFlux.PublierDefinitionAsync("approbation-commande");
+await _serviceBpm.PublierDefinitionAsync("approbation-commande");
 
 // Lister toutes les définitions (toutes versions, tous statuts)
-var definitions = await _serviceFlux.ObtenirDefinitionsAsync();
+var definitions = await _serviceBpm.ObtenirDefinitionsAsync();
 ```
 
 > Une définition publiée ne peut plus être modifiée. Pour une nouvelle version, sauvegardez un nouveau brouillon avec la même clé, puis publiez-le.
@@ -507,7 +509,7 @@ var variables = new Dictionary<string, object?>
     ["montant"]    = 1500.00m
 };
 
-long idInstance = await _serviceFlux.DemarrerAsync(
+long idInstance = await _serviceBpm.DemarrerAsync(
     cleDefinition:      "approbation-commande",
     aggregateId:        42L,
     variablesInitiales: variables);
@@ -517,14 +519,14 @@ long idInstance = await _serviceFlux.DemarrerAsync(
 
 ```csharp
 // Par ID d'instance
-var instance = await _serviceFlux.ObtenirAsync(idInstance);
+var instance = await _serviceBpm.ObtenirAsync(idInstance);
 
 // Par agrégat (retourne null si aucune instance active)
-var instance = await _serviceFlux.ObtenirParAggregateAsync(
+var instance = await _serviceBpm.ObtenirParAggregateAsync(
     "approbation-commande", aggregateId: 42L);
 
 // Recherche par valeur de variable
-var instances = await _serviceFlux.RechercherParVariableAsync("statut", "EnAttente");
+var instances = await _serviceBpm.RechercherParVariableAsync("statut", "EnAttente");
 ```
 
 **Statuts possibles d'une instance :**
@@ -538,7 +540,9 @@ var instances = await _serviceFlux.RechercherParVariableAsync("statut", "EnAtten
 
 ---
 
-## 8. Compléter une étape interactive
+## 8. Tâches interactives et affectation
+
+### Compléter une étape
 
 Lorsqu'une instance est suspendue sur un nœud interactif (après qu'un utilisateur a traité la tâche), appelez `TerminerEtapeAsync` :
 
@@ -546,10 +550,55 @@ Lorsqu'une instance est suspendue sur un nœud interactif (après qu'un utilisat
 // IDbConnection est fourni via le scope Autofac (voir §3.1)
 
 // Optionnel : écrire le résultat de la tâche dans les variables avant de reprendre
-await _serviceFlux.ModifierVariableAsync(idInstance, "statut", "Approuvee");
+await _serviceBpm.ModifierVariableAsync(idInstance, "statut", "Approuvee");
 
 // Reprendre l'exécution (exécute la CommandePost si définie, ferme la tâche externe)
-await _serviceFlux.TerminerEtapeAsync(idInstance);
+await _serviceBpm.TerminerEtapeAsync(idInstance);
+```
+
+### Affectation automatique (LogonAuto)
+
+Un nœud interactif peut se voir attribuer un logon **à la conception** via `LogonAuto`. Lors de l'arrivée sur ce nœud, le moteur appelle automatiquement `IGestionTache.AssignerTacheAsync` et enregistre le logon dans le détail de l'événement `NoeudSuspendu`.
+
+```csharp
+// Dans la définition du processus (ProcessusBuilder)
+.Interactif("validation-responsable", b => b
+    .Tache("Valider le dossier", "Vérifier les pièces justificatives")
+    .LogonAuto("chef.service@corp.com")   // assignation auto à l'arrivée sur le nœud
+    .Vers("archivage"))
+```
+
+```json
+// Équivalent JSON
+{
+  "id": "validation-responsable",
+  "type": "NoeudInteractif",
+  "definitionTache": {
+    "titre": "Valider le dossier",
+    "description": "Vérifier les pièces justificatives",
+    "logonAuto": "chef.service@corp.com"
+  }
+}
+```
+
+### Affectation manuelle
+
+Pour affecter (ou réaffecter) dynamiquement un logon sur une instance suspendue :
+
+```csharp
+// Assigne le logon et appelle IGestionTache.AssignerTacheAsync
+// Enregistre un événement TacheAssignee dans l'historique
+await _serviceBpm.AssignerLogonAsync(idInstance, "collaborateur@corp.com");
+```
+
+### Consulter le logon actif
+
+```csharp
+// Retourne le logon le plus récent :
+// 1. Dernière affectation manuelle (TacheAssignee) si postérieure à la suspension
+// 2. LogonAuto de la définition sinon
+// 3. null si aucun logon n'a été défini
+string? logon = await _serviceBpm.ObtenirLogonTacheActiveAsync(idInstance);
 ```
 
 ---
@@ -561,7 +610,7 @@ Les signaux permettent de débloquer une ou plusieurs instances suspendues sur u
 ### Signal ciblé (une seule instance)
 
 ```csharp
-await _serviceFlux.EnvoyerSignalAsync(
+await _serviceBpm.EnvoyerSignalAsync(
     nomSignal:  "PaiementRecu",
     idInstance: idInstance);
 ```
@@ -569,14 +618,14 @@ await _serviceFlux.EnvoyerSignalAsync(
 ### Signal broadcast (toutes les instances en attente de ce signal)
 
 ```csharp
-await _serviceFlux.EnvoyerSignalAsync("ValidationLot");
+await _serviceBpm.EnvoyerSignalAsync("ValidationLot");
 // idInstance omis → toutes les instances attendant "ValidationLot" sont débloquées
 ```
 
 ### Vérifier les signaux attendus par une instance
 
 ```csharp
-var signaux = await _serviceFlux.ObtenirSignauxEnAttenteAsync(idInstance);
+var signaux = await _serviceBpm.ObtenirSignauxEnAttenteAsync(idInstance);
 // Retourne ex : ["PaiementRecu", "ConfirmationLivraison"]
 ```
 
@@ -593,11 +642,11 @@ Le réveil des instances suspendues sur un `NoeudAttenteTemps` est **entièremen
 // IDbConnection est fourni via le scope Autofac (voir §3.1)
 public async Task ReveilllerInstancesEchuesAsync()
 {
-    var instancesEchues = await _serviceFlux.ObtenirInstancesEchuesAsync(DateTime.UtcNow);
+    var instancesEchues = await _serviceBpm.ObtenirInstancesEchuesAsync(DateTime.UtcNow);
 
     foreach (var instance in instancesEchues)
     {
-        await _serviceFlux.ReprendreAttenteTempsAsync(instance.IdInstance);
+        await _serviceBpm.ReprendreAttenteTempsAsync(instance.IdInstance);
     }
 }
 ```
@@ -630,7 +679,7 @@ var toutes = contexte.Variables.ObtenirToutes();
 
 ```csharp
 // Modification externe d'une variable (enregistrée dans l'historique)
-await _serviceFlux.ModifierVariableAsync(
+await _serviceBpm.ModifierVariableAsync(
     idInstance:  idInstance,
     nomVariable: "priorite",
     valeur:      "Haute");
@@ -643,7 +692,7 @@ await _serviceFlux.ModifierVariableAsync(
 Chaque transition de l'instance génère automatiquement un événement d'audit.
 
 ```csharp
-var historique = await _serviceFlux.ObtenirHistoriqueAsync(idInstance);
+var historique = await _serviceBpm.ObtenirHistoriqueAsync(idInstance);
 
 foreach (var evenement in historique)
 {
@@ -664,6 +713,7 @@ foreach (var evenement in historique)
 | `FinProcessus`      | Instance terminée                                     |
 | `SignalRecu`        | Signal reçu pour débloquer une attente                |
 | `VariableModifiee`  | Modification externe d'une variable                   |
+| `TacheAssignee`     | Affectation manuelle d'un logon via `AssignerLogonAsync` |
 | `MigrationInstance` | Migration vers une nouvelle version                   |
 
 ---
@@ -730,11 +780,11 @@ using var scope = _container.BeginLifetimeScope(b =>
      .As<IDbConnection>()
      .ExternallyOwned());
 
-var serviceFlux = scope.Resolve<IServiceFlux>();
+var serviceBpm = scope.Resolve<IServiceBpm>();
 
 try
 {
-    await serviceFlux.DemarrerAsync("approbation-commande", aggregateId, variables);
+    await serviceBpm.DemarrerAsync("approbation-commande", aggregateId, variables);
     transaction.Commit();
 }
 catch (Exception ex)

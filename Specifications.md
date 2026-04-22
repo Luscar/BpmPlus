@@ -59,7 +59,7 @@ BpmPlus/
 │   │   ├── Modele/                     ← Entités : InstanceProcessus, NoeudProcessus, etc.
 │   │   ├── Execution/                  ← Moteur d'exécution des nœuds
 │   │   ├── Definition/                 ← Modèle de définition + Fluent Builder
-│   │   ├── Services/                   ← IServiceFlux, IServiceMigration (implémentations)
+│   │   ├── Services/                   ← IServiceBpm, IServiceMigration (implémentations)
 │   │   └── Persistance/                ← Interfaces Repository
 │   ├── BpmPlus.Persistance.Oracle/    ← Implémentation Oracle des repositories
 │   ├── BpmPlus.Persistance.Sqlite/    ← Implémentation SQLite des repositories
@@ -206,7 +206,8 @@ Historique des transitions et événements d’une instance.
 - `FinProcessus` — instance terminée (avec ID du nœud de fin)
 - `MigrationInstance` — migration vers une nouvelle version (détail : ancienne version, ancien nœud, nouveau nœud)
 - `SignalRecu` — signal reçu pour débloquer une attente
-- `VariableModifiee` — modification manuelle d’une variable via `IServiceFlux`
+- `VariableModifiee` — modification manuelle d’une variable via `IServiceBpm`
+- `TacheAssignee` — affectation manuelle d’un logon via `AssignerLogonAsync` (Detail = logon)
 
 -----
 
@@ -261,8 +262,9 @@ Parametres          : Dictionary<string, ISourceParametre>  // Paramètres addit
 **Cycle de vie — Arrivée au nœud (même transaction) :**
 
 1. Si `CommandePre` est définie → exécution de la commande PRE (même mécanique que `NoeudMetier`).
-1. Appel à `IGestionTache.CreerTacheAsync(definitionTache, instance)` → retourne un `idTacheExterne` (string).
-1. L’`idTacheExterne` est enregistré dans le détail de l’événement `NoeudSuspendu`.
+1. Appel à `IGestionTache.CreerTacheAsync(definitionTache, instance)` → retourne un `idTacheExterne` (`long`).
+1. Si `DefinitionTache.LogonAuto` est renseigné → appel immédiat à `IGestionTache.AssignerTacheAsync(idTacheExterne, logonAuto)`.
+1. L’`idTacheExterne` (et le `logon` si défini) sont enregistrés dans le détail JSON de l’événement `NoeudSuspendu`.
 1. L’instance passe au statut `Suspendue`, `IdNoeudCourant` = ID du nœud interactif.
 1. Transaction committée par l’appelant.
 
@@ -277,6 +279,7 @@ Parametres          : Dictionary<string, ISourceParametre>  // Paramètres addit
 
 ```
 DefinitionTache     : DefinitionTache               // Métadonnées pour IGestionTache (nom, description, etc.)
+  └ LogonAuto       : string?                       // Logon assigné automatiquement à la création de la tâche
 CommandePre         : DefinitionCommande?           // Commande optionnelle avant suspension
 CommandePost        : DefinitionCommande?           // Commande optionnelle à la complétion
 ```
@@ -583,7 +586,7 @@ public interface IGestionTache
     /// Appelé dans la même transaction que la suspension de l'instance.
     /// </summary>
     /// <returns>Identifiant externe de la tâche créée (conservé dans l'historique).</returns>
-    Task<string> CreerTacheAsync(
+    Task<long> CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
         CancellationToken ct = default);
@@ -592,12 +595,12 @@ public interface IGestionTache
     /// Ferme la tâche externe lors de la complétion d'un NoeudInteractif.
     /// Appelé dans la même transaction que la reprise de l'instance.
     /// </summary>
-    Task FermerTacheAsync(string idTacheExterne, CancellationToken ct = default);
+    Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default);
 
     /// <summary>
-    /// Assigne la tâche à un utilisateur ou groupe.
+    /// Assigne la tâche à un utilisateur ou groupe (logon).
     /// </summary>
-    Task AssignerTacheAsync(string idTacheExterne, string assignee, CancellationToken ct = default);
+    Task AssignerTacheAsync(long idTacheExterne, string logon, CancellationToken ct = default);
 }
 ```
 
@@ -679,16 +682,16 @@ public interface IAccesseurVariables
 
 Ces interfaces sont définies dans `BpmPlus.Abstractions` et sont implémentées par `BpmPlus.Core`.
 
-### 8.1 `IServiceFlux`
+### 8.1 `IServiceBpm`
 
 ```csharp
 namespace BpmPlus.Abstractions;
 
 /// <summary>
 /// Point d'entrée principal pour interagir avec le moteur BPM.
-/// Toutes les méthodes requièrent un IDbTransaction fourni par l'application cliente.
+/// La connexion de base de données est fournie via IDbConnection enregistré dans le conteneur IoC.
 /// </summary>
-public interface IServiceFlux
+public interface IServiceBpm
 {
     // ── Instances ─────────────────────────────────────────────────────────────
 
@@ -791,10 +794,27 @@ public interface IServiceFlux
     /// <summary>Retourne toutes les définitions (toutes versions, tous statuts).</summary>
     Task<IReadOnlyList<DefinitionProcessus>> ObtenirDefinitionsAsync(IDbTransaction transaction, CancellationToken ct = default);
 
+    // ── Tâches ────────────────────────────────────────────────────────────────
+
+    /// <summary>Retourne l'identifiant externe de la tâche active d'une instance suspendue.</summary>
+    Task<long?> ObtenirIdTacheActiveAsync(long idInstance, CancellationToken ct = default);
+
+    /// <summary>
+    /// Retourne le logon actif de la tâche : dernière affectation manuelle (TacheAssignee)
+    /// si postérieure à la suspension, sinon LogonAuto de la définition, sinon null.
+    /// </summary>
+    Task<string?> ObtenirLogonTacheActiveAsync(long idInstance, CancellationToken ct = default);
+
+    /// <summary>
+    /// Assigne un logon à la tâche active d'une instance suspendue.
+    /// Appelle IGestionTache.AssignerTacheAsync et enregistre un événement TacheAssignee.
+    /// </summary>
+    Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     /// <summary>Retourne l'historique des événements d'une instance.</summary>
-    Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(long idInstance, IDbTransaction transaction, CancellationToken ct = default);
+    Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(long idInstance, CancellationToken ct = default);
 }
 ```
 
@@ -850,7 +870,7 @@ public interface IServiceMigration
 ### 9.1 Gestion des transactions
 
 - Le moteur **ne crée jamais** de connexion ni de transaction.
-- Chaque méthode de `IServiceFlux` et `IServiceMigration` reçoit un `IDbTransaction` actif.
+- Chaque méthode de `IServiceBpm` et `IServiceMigration` reçoit un `IDbTransaction` actif.
 - Toutes les opérations du moteur (exécution des nœuds, persistance des variables, écriture de l’historique) utilisent cette transaction.
 - Les handlers de l’application cliente (`IBpmHandlerCommande`, `IBpmHandlerQuery`) reçoivent la même transaction via `IContexteExecution.Transaction`.
 - **L’appelant est responsable du commit ou du rollback.** Le moteur ne committe jamais.
@@ -912,7 +932,7 @@ builder.RegisterModule(new BpmModule(config =>
 
 ### 10.2 Ce que le module enregistre automatiquement
 
-- `IServiceFlux` → `ServiceFlux` (scoped)
+- `IServiceBpm` → `ServiceBpm` (scoped)
 - `IServiceMigration` → `ServiceMigration` (scoped)
 - `IBpmHandlerCommande` → tous les handlers découverts (keyed par `NomCommande`)
 - `IBpmHandlerQuery<>` → tous les handlers découverts (keyed par `NomQuery`)
@@ -959,12 +979,12 @@ public record ResultatMigration(
 
 ### 12.1 Événements automatiquement enregistrés
 
-Toutes les transitions importantes sont enregistrées dans `{PREFIX}_EVENEMENT_INSTANCE` sans intervention des handlers. L’application cliente peut consulter l’historique via `IServiceFlux.ObtenirHistoriqueAsync`.
+Toutes les transitions importantes sont enregistrées dans `{PREFIX}_EVENEMENT_INSTANCE` sans intervention des handlers. L’application cliente peut consulter l’historique via `IServiceBpm.ObtenirHistoriqueAsync`.
 
 ### 12.2 Accès à l’historique
 
 ```csharp
-var evenements = await serviceFlux.ObtenirHistoriqueAsync(idInstance, transaction);
+var evenements = await serviceBpm.ObtenirHistoriqueAsync(idInstance);
 
 foreach (var evt in evenements)
 {
@@ -1040,6 +1060,6 @@ Les éléments suivants sont explicitement **hors périmètre** de `BpmPlus` :
 - **Interface utilisateur** : aucune UI de supervision ou de modélisation de processus.
 - **Parallélisme (AND-split / AND-join)** : uniquement XOR sur les décisions.
 - **Événements de domaine** : le moteur ne publie pas d’événements sur un bus de messages. C’est aux handlers clients de le faire si nécessaire.
-- **Authentification / autorisation** : la sécurité d’accès aux méthodes de `IServiceFlux` est à la charge de l’application cliente.
+- **Authentification / autorisation** : la sécurité d’accès aux méthodes de `IServiceBpm` est à la charge de l’application cliente.
 - **Format BPMN 2.0** : le format JSON de définition est un format maison adapté aux besoins du projet.
 - **Rollback partiel / retry** : en cas d’erreur, c’est toujours un rollback complet. Aucune logique de retry intégrée.
