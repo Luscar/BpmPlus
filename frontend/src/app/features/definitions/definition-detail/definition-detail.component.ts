@@ -16,7 +16,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
 @Component({
   selector: 'app-definition-detail',
-  standalone: true,
   imports: [
     CommonModule, RouterModule,
     MatCardModule, MatIconModule, MatButtonModule, MatTabsModule,

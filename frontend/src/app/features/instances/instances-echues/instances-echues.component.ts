@@ -12,7 +12,6 @@ import { InstanceEchue } from '../../../core/models/instance.model';
 
 @Component({
   selector: 'app-instances-echues',
-  standalone: true,
   imports: [
     CommonModule, RouterModule,
     MatCardModule, MatIconModule, MatButtonModule,

@@ -23,7 +23,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
 @Component({
   selector: 'app-instance-detail',
-  standalone: true,
   imports: [
     CommonModule, RouterModule, ReactiveFormsModule,
     MatCardModule, MatIconModule, MatButtonModule, MatTabsModule,

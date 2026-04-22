@@ -45,7 +45,6 @@ const DEBOUNCE_MS = 400;
 
 @Component({
   selector: 'app-instances-list',
-  standalone: true,
   imports: [
     CommonModule, RouterModule, ReactiveFormsModule,
     MatTableModule, MatCardModule, MatIconModule, MatButtonModule,
