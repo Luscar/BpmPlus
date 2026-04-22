@@ -11,5 +11,6 @@ public enum TypeEvenement
     FinProcessus,
     MigrationInstance,
     SignalRecu,
-    VariableModifiee
+    VariableModifiee,
+    TacheAssignee
 }

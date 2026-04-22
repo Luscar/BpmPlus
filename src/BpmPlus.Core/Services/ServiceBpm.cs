@@ -15,6 +15,7 @@ public class ServiceBpm : IServiceBpm
     private readonly IRepositoryVariable _repoVariable;
     private readonly IRepositoryEvenement _repoEvenement;
     private readonly IRepositoryAttenteSignal _repoSignal;
+    private readonly IGestionTache _gestionTache;
     private readonly MoteurExecution _moteur;
     private readonly ExecuteurNoeudInteractif _executeurInteractif;
     private readonly ExecuteurNoeudAttenteTemps _executeurAttenteTemps;
@@ -27,6 +28,7 @@ public class ServiceBpm : IServiceBpm
         IRepositoryVariable repoVariable,
         IRepositoryEvenement repoEvenement,
         IRepositoryAttenteSignal repoSignal,
+        IGestionTache gestionTache,
         MoteurExecution moteur,
         ExecuteurNoeudInteractif executeurInteractif,
         ExecuteurNoeudAttenteTemps executeurAttenteTemps,
@@ -38,6 +40,7 @@ public class ServiceBpm : IServiceBpm
         _repoVariable = repoVariable;
         _repoEvenement = repoEvenement;
         _repoSignal = repoSignal;
+        _gestionTache = gestionTache;
         _moteur = moteur;
         _executeurInteractif = executeurInteractif;
         _executeurAttenteTemps = executeurAttenteTemps;
@@ -316,6 +319,49 @@ public class ServiceBpm : IServiceBpm
 
     public Task<long?> ObtenirIdTacheActiveAsync(long idInstance, CancellationToken ct = default)
         => ExtraireIdTacheExterneAsync(idInstance, ct);
+
+    public async Task<string?> ObtenirLogonTacheActiveAsync(long idInstance, CancellationToken ct = default)
+    {
+        var suspension = await _repoEvenement.ObtenirDernierSuspensionAsync(idInstance, ct);
+        if (suspension is null) return null;
+
+        var assignation = await _repoEvenement.ObtenirDernierParTypeAsync(
+            idInstance, TypeEvenement.TacheAssignee, ct);
+        if (assignation is not null && assignation.Id > suspension.Id)
+            return assignation.Detail;
+
+        if (suspension.Detail is null) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(suspension.Detail);
+            if (doc.RootElement.TryGetProperty("logon", out var el))
+                return el.GetString();
+        }
+        catch (JsonException) { }
+
+        return null;
+    }
+
+    public async Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default)
+    {
+        var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
+
+        var idTacheExterne = await ExtraireIdTacheExterneAsync(idInstance, ct);
+        if (idTacheExterne is not null)
+            await _gestionTache.AssignerTacheAsync(idTacheExterne.Value, logon, ct);
+
+        await _repoEvenement.AjouterAsync(new EvenementInstance
+        {
+            IdInstance = idInstance,
+            TypeEvenement = TypeEvenement.TacheAssignee,
+            IdNoeud = instance.IdNoeudCourant,
+            Horodatage = DateTime.UtcNow,
+            Resultat = ResultatEvenement.Succes,
+            Detail = logon
+        }, ct);
+
+        _logger.LogInformation("Instance {IdInstance} — tâche assignée à '{Logon}'", idInstance, logon);
+    }
 
     // ── Historique ────────────────────────────────────────────────────────────
 

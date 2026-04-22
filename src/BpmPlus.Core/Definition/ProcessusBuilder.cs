@@ -233,6 +233,12 @@ public class InteractifBuilder : NoeudBuilder<InteractifBuilder, NoeudInteractif
         return this;
     }
 
+    public InteractifBuilder LogonAuto(string logon)
+    {
+        _tache.LogonAuto = logon;
+        return this;
+    }
+
     /// <summary>Commande exécutée à la suspension. Nom par défaut : PascalCase(id) + "PreCommand".</summary>
     public InteractifBuilder CommandePre(string? nom = null, Action<CommandeBuilder>? config = null)
     {
