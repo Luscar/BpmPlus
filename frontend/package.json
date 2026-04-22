@@ -27,7 +27,8 @@
   },
   "overrides": {
     "postcss": "8.5.8",
-    "mermaid": "11.12.3"
+    "mermaid": "11.12.3",
+    "chevrotain": "12.0.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.21",
