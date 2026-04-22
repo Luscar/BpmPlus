@@ -1,121 +1,275 @@
 <div class="page">
-  <h1 class="page-title">
-    <mat-icon>list_alt</mat-icon>
-    Instances de processus
-  </h1>
 
-  <div class="filters">
-    <mat-form-field appearance="outline" class="filter-field">
-      <mat-label>Statut</mat-label>
-      <mat-select [formControl]="statutCtrl">
-        @for (s of statuts; track s.value) {
-          <mat-option [value]="s.value">{{ s.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>list_alt</mat-icon>
+      Instances de processus
+    </h1>
 
-    <mat-form-field appearance="outline" class="filter-field">
-      <mat-label>Clé de définition</mat-label>
-      <input matInput [formControl]="definitionCtrl" placeholder="ex: commande-achat" />
-      <mat-icon matSuffix>search</mat-icon>
-    </mat-form-field>
-
-    <button mat-icon-button (click)="charger()" matTooltip="Rafraîchir">
-      <mat-icon>refresh</mat-icon>
-    </button>
+    <!-- Filtres rapides par statut -->
+    <div class="filtres-rapides">
+      @for (s of toutesStatuts; track s) {
+        <button mat-stroked-button class="filtre-rapide"
+          (click)="appliquerFiltreRapide(s)">
+          <app-status-badge [statut]="s" />
+        </button>
+      }
+      @if (nbFiltresActifs > 0) {
+        <button mat-stroked-button color="warn" (click)="reinitialiser()">
+          <mat-icon>clear</mat-icon> Réinitialiser
+        </button>
+      }
+    </div>
   </div>
 
-  @if (loading) {
-    <div class="center"><mat-spinner /></div>
-  } @else {
-    <mat-card>
-      <mat-card-content>
-        <table mat-table [dataSource]="instances" class="full-width">
-
-          <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef>#</th>
-            <td mat-cell *matCellDef="let i">
-              <code class="mono">{{ i.id }}</code>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="definition">
-            <th mat-header-cell *matHeaderCellDef>Définition</th>
-            <td mat-cell *matCellDef="let i">
-              <a [routerLink]="['/definitions', i.cleDefinition]" class="link" (click)="$event.stopPropagation()">
-                {{ i.cleDefinition }}
-              </a>
-              <span class="version-tag">v{{ i.versionDefinition }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="statut">
-            <th mat-header-cell *matHeaderCellDef>Statut</th>
-            <td mat-cell *matCellDef="let i">
-              <app-status-badge [statut]="i.statut" />
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="noeud">
-            <th mat-header-cell *matHeaderCellDef>Nœud courant</th>
-            <td mat-cell *matCellDef="let i">
-              @if (i.idNoeudCourant) {
-                <code class="mono">{{ i.idNoeudCourant }}</code>
-              } @else {
-                <span class="dim">—</span>
-              }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="parent">
-            <th mat-header-cell *matHeaderCellDef>Parent</th>
-            <td mat-cell *matCellDef="let i">
-              @if (i.idInstanceParent) {
-                <a [routerLink]="['/instances', i.idInstanceParent]" class="link" (click)="$event.stopPropagation()">
-                  <mat-icon class="tiny-icon">arrow_upward</mat-icon>{{ i.idInstanceParent }}
-                </a>
-              } @else {
-                <span class="dim">—</span>
-              }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="dateDebut">
-            <th mat-header-cell *matHeaderCellDef>Début</th>
-            <td mat-cell *matCellDef="let i">{{ i.dateDebut | date:'dd/MM HH:mm' }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="dateMaj">
-            <th mat-header-cell *matHeaderCellDef>Mise à jour</th>
-            <td mat-cell *matCellDef="let i">{{ i.dateMaj | date:'dd/MM HH:mm' }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let i">
-              <button mat-icon-button color="primary"
-                [routerLink]="['/instances', i.id]"
-                matTooltip="Voir le détail"
-                (click)="$event.stopPropagation()">
-                <mat-icon>open_in_new</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-            class="clickable-row"
-            (click)="naviguerInstance(row.id)"></tr>
-
-        </table>
-
-        @if (instances.length === 0) {
-          <div class="empty">
-            <mat-icon>list_alt</mat-icon>
-            <p>Aucune instance trouvée.</p>
-          </div>
+  <!-- ── Panneau de filtres avancés ──────────────────────────────────────── -->
+  <mat-expansion-panel class="filtres-panel" [expanded]="nbFiltresActifs > 0">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>filter_list</mat-icon>
+        Filtres avancés
+        @if (nbFiltresActifs > 0) {
+          <span class="filtre-badge">{{ nbFiltresActifs }}</span>
         }
-      </mat-card-content>
-    </mat-card>
+      </mat-panel-title>
+      <mat-panel-description>
+        {{ resultat ? resultat.total + ' résultat(s)' : '' }}
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    <form [formGroup]="form" class="filtres-form">
+
+      <!-- Ligne 1 : Statuts + Définition + Aggregate -->
+      <div class="filtres-row">
+
+        <mat-form-field appearance="outline" class="field-statuts">
+          <mat-label>Statuts</mat-label>
+          <mat-select formControlName="statuts" multiple>
+            @for (s of toutesStatuts; track s) {
+              <mat-option [value]="s">{{ labelStatut(s) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-def">
+          <mat-label>Clé de définition</mat-label>
+          <mat-icon matPrefix>account_tree</mat-icon>
+          <input matInput formControlName="cleDefinition" placeholder="ex: commande-achat" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-agg">
+          <mat-label>Aggregate ID</mat-label>
+          <mat-icon matPrefix>fingerprint</mat-icon>
+          <input matInput type="number" formControlName="aggregateId" placeholder="ex: 1001" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-noeud">
+          <mat-label>Nœud courant</mat-label>
+          <mat-icon matPrefix>location_on</mat-icon>
+          <input matInput formControlName="idNoeudCourant" placeholder="ex: approbation" />
+        </mat-form-field>
+
+      </div>
+
+      <!-- Ligne 2 : Dates + Racines + Variable -->
+      <div class="filtres-row">
+
+        <mat-form-field appearance="outline" class="field-date">
+          <mat-label>Démarré après le</mat-label>
+          <input matInput [matDatepicker]="dpMin" formControlName="dateDebutMin" />
+          <mat-datepicker-toggle matIconSuffix [for]="dpMin" />
+          <mat-datepicker #dpMin />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-date">
+          <mat-label>Démarré avant le</mat-label>
+          <input matInput [matDatepicker]="dpMax" formControlName="dateDebutMax" />
+          <mat-datepicker-toggle matIconSuffix [for]="dpMax" />
+          <mat-datepicker #dpMax />
+        </mat-form-field>
+
+        <div class="field-check">
+          <mat-checkbox formControlName="racinesSeulement" color="primary">
+            Racines seulement
+            <span class="check-hint">(sans parent)</span>
+          </mat-checkbox>
+        </div>
+
+        <mat-divider vertical class="divider" />
+
+        <mat-form-field appearance="outline" class="field-var-nom">
+          <mat-label>Variable</mat-label>
+          <mat-icon matPrefix>data_object</mat-icon>
+          <input matInput formControlName="nomVariable" placeholder="nom" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-var-val">
+          <mat-label>Valeur</mat-label>
+          <input matInput formControlName="valeurVariable" placeholder="contient..." />
+        </mat-form-field>
+
+      </div>
+
+    </form>
+  </mat-expansion-panel>
+
+  <!-- ── Chips des filtres actifs ───────────────────────────────────────── -->
+  @if (filtresActifs.length > 0) {
+    <div class="active-chips">
+      @for (f of filtresActifs; track $index; let i = $index) {
+        <mat-chip-row (removed)="retirerFiltre(i)">
+          {{ f }}
+          <button matChipRemove aria-label="Retirer ce filtre">
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </mat-chip-row>
+      }
+    </div>
   }
+
+  <!-- ── Tableau ────────────────────────────────────────────────────────── -->
+  <mat-card class="table-card">
+
+    @if (loading) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar" />
+    }
+
+    <mat-card-content>
+
+      <!-- Résumé -->
+      <div class="table-header">
+        <span class="result-count">
+          @if (resultat) {
+            <strong>{{ resultat.total | number }}</strong> instance(s) trouvée(s)
+            — page {{ resultat.page }} / {{ resultat.totalPages }}
+          }
+        </span>
+        <button mat-icon-button (click)="rechercher()" matTooltip="Rafraîchir" [disabled]="loading">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <table mat-table [dataSource]="resultat?.instances ?? []"
+        matSort (matSortChange)="onSort($event)"
+        class="full-width">
+
+        <!-- ID -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="id">#</th>
+          <td mat-cell *matCellDef="let i">
+            <code class="mono">{{ i.id }}</code>
+          </td>
+        </ng-container>
+
+        <!-- Aggregate ID -->
+        <ng-container matColumnDef="aggregateId">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="aggregateId">Aggregate</th>
+          <td mat-cell *matCellDef="let i">
+            <code class="mono dim">{{ i.aggregateId }}</code>
+          </td>
+        </ng-container>
+
+        <!-- Définition -->
+        <ng-container matColumnDef="definition">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="cledefinition">Définition</th>
+          <td mat-cell *matCellDef="let i">
+            <a [routerLink]="['/definitions', i.cleDefinition]" class="link" (click)="$event.stopPropagation()">
+              {{ i.cleDefinition }}
+            </a>
+            <span class="version-tag">v{{ i.versionDefinition }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Statut -->
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="statut">Statut</th>
+          <td mat-cell *matCellDef="let i">
+            <app-status-badge [statut]="i.statut" />
+          </td>
+        </ng-container>
+
+        <!-- Nœud courant -->
+        <ng-container matColumnDef="noeud">
+          <th mat-header-cell *matHeaderCellDef>Nœud courant</th>
+          <td mat-cell *matCellDef="let i">
+            @if (i.idNoeudCourant) {
+              <code class="mono sm">{{ i.idNoeudCourant }}</code>
+            } @else {
+              <span class="dim">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Parent -->
+        <ng-container matColumnDef="parent">
+          <th mat-header-cell *matHeaderCellDef>Parent</th>
+          <td mat-cell *matCellDef="let i">
+            @if (i.idInstanceParent) {
+              <a [routerLink]="['/instances', i.idInstanceParent]" class="link parent-link" (click)="$event.stopPropagation()">
+                <mat-icon class="tiny-icon">arrow_upward</mat-icon>{{ i.idInstanceParent }}
+              </a>
+            } @else {
+              <span class="dim">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Date début -->
+        <ng-container matColumnDef="dateDebut">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="datedebut">Début</th>
+          <td mat-cell *matCellDef="let i">{{ i.dateDebut | date:'dd/MM/yy HH:mm' }}</td>
+        </ng-container>
+
+        <!-- Date MAJ -->
+        <ng-container matColumnDef="dateMaj">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="datemaj">Mise à jour</th>
+          <td mat-cell *matCellDef="let i">{{ i.dateMaj | date:'dd/MM/yy HH:mm' }}</td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let i">
+            <button mat-icon-button color="primary"
+              [routerLink]="['/instances', i.id]"
+              matTooltip="Voir le détail"
+              (click)="$event.stopPropagation()">
+              <mat-icon>open_in_new</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          class="clickable-row"
+          (click)="naviguer(row.id)"></tr>
+
+        <tr class="mat-mdc-no-data-row" *matNoDataRow>
+          <td [attr.colspan]="displayedColumns.length" class="no-data-cell">
+            @if (!loading) {
+              <div class="empty">
+                <mat-icon>search_off</mat-icon>
+                <p>Aucune instance ne correspond aux critères de recherche.</p>
+                <button mat-stroked-button (click)="reinitialiser()">Réinitialiser les filtres</button>
+              </div>
+            }
+          </td>
+        </tr>
+
+      </table>
+
+      <!-- Pagination -->
+      <mat-paginator
+        [length]="resultat?.total ?? 0"
+        [pageSize]="taille"
+        [pageSizeOptions]="taillesPage"
+        [pageIndex]="page - 1"
+        showFirstLastButtons
+        (page)="onPage($event)"
+        aria-label="Sélectionner la page"
+      />
+
+    </mat-card-content>
+  </mat-card>
+
 </div>

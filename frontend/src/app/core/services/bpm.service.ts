@@ -7,6 +7,8 @@ import {
   EvenementInstance,
   InstanceEchue,
   InstanceProcessus,
+  RechercheInstancesQuery,
+  ResultatRechercheInstances,
   StatutInstance,
 } from '../models/instance.model';
 
@@ -46,6 +48,14 @@ export class BpmService {
     if (statut) params = params.set('statut', statut);
     if (cleDefinition) params = params.set('cleDefinition', cleDefinition);
     return this.http.get<InstanceProcessus[]>(`${this.base}/instances`, { params });
+  }
+
+  rechercherInstances(q: RechercheInstancesQuery): Observable<ResultatRechercheInstances> {
+    // On utilise POST pour transmettre la liste multi-valeur des statuts sans encoder manuellement
+    return this.http.post<ResultatRechercheInstances>(
+      `${this.base}/instances/recherche`,
+      q
+    );
   }
 
   getInstance(id: number): Observable<InstanceProcessus> {

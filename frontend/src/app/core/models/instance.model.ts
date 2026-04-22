@@ -46,6 +46,32 @@ export interface InstanceEchue {
   dateEcheance: string;
 }
 
+// ── Recherche avancée ─────────────────────────────────────────────────────────
+
+export interface RechercheInstancesQuery {
+  statuts?:          StatutInstance[];
+  cleDefinition?:    string;
+  aggregateId?:      number;
+  idNoeudCourant?:   string;
+  dateDebutMin?:     string;   // ISO date string
+  dateDebutMax?:     string;
+  racinesSeulement?: boolean;
+  nomVariable?:      string;
+  valeurVariable?:   string;
+  page:              number;
+  taille:            number;
+  triColonne?:       string;
+  triSens?:          'asc' | 'desc';
+}
+
+export interface ResultatRechercheInstances {
+  total:      number;
+  page:       number;
+  taille:     number;
+  totalPages: number;
+  instances:  InstanceProcessus[];
+}
+
 export interface DashboardStats {
   definitions: {
     total: number;

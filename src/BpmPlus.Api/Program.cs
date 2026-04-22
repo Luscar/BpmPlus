@@ -24,6 +24,12 @@ builder.Host.ConfigureContainer<ContainerBuilder>(cb =>
 
     cb.RegisterModule(new BpmModule(cfg =>
         cfg.UseSqlite().ScanHandlers(typeof(Program).Assembly)));
+
+    // Service de recherche avancée (SQL dynamique, indépendant du moteur BPM)
+    cb.Register(ctx =>
+        new InstanceSearchService(ctx.Resolve<IDbConnection>(), "BPM"))
+      .AsSelf()
+      .InstancePerLifetimeScope();
 });
 
 builder.Services.AddControllers().AddJsonOptions(opts =>
