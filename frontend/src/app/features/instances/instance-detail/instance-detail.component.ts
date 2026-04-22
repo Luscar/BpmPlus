@@ -15,10 +15,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { BpmService } from '../../../core/services/bpm.service';
-import { BpmnService } from '../../../core/services/bpmn.service';
+import { MermaidService } from '../../../core/services/mermaid.service';
 import { InstanceProcessus, EvenementInstance } from '../../../core/models/instance.model';
 import { DefinitionProcessus } from '../../../core/models/definition.model';
-import { BpmnDiagramComponent } from '../../../shared/components/bpmn-diagram/bpmn-diagram.component';
+import { MermaidDiagramComponent } from '../../../shared/components/mermaid-diagram/mermaid-diagram.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 
 @Component({
@@ -29,7 +29,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
     MatCardModule, MatIconModule, MatButtonModule, MatTabsModule,
     MatProgressSpinnerModule, MatSnackBarModule, MatFormFieldModule,
     MatInputModule, MatTooltipModule, MatDividerModule,
-    BpmnDiagramComponent, StatusBadgeComponent,
+    MermaidDiagramComponent, StatusBadgeComponent,
   ],
   templateUrl: './instance-detail.component.html',
   styleUrl: './instance-detail.component.scss',
@@ -37,7 +37,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 export class InstanceDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly bpm = inject(BpmService);
-  private readonly bpmnSvc = inject(BpmnService);
+  private readonly mermaidSvc = inject(MermaidService);
   private readonly snack = inject(MatSnackBar);
 
   id!: number;
@@ -49,7 +49,6 @@ export class InstanceDetailComponent implements OnInit {
   signaux: string[] = [];
   tache: { idTache?: number; logon?: string } = {};
   diagram = '';
-  currentNodeId = '';
   loading = true;
   actionLoading = false;
 
@@ -98,8 +97,7 @@ export class InstanceDetailComponent implements OnInit {
       this.tache      = tache;
       if (definition) {
         this.definition = definition;
-        this.diagram = this.bpmnSvc.generateDiagram(definition);
-        this.currentNodeId = inst.idNoeudCourant ?? '';
+        this.diagram = this.mermaidSvc.generateDiagram(definition, inst.idNoeudCourant);
       }
       this.loading = false;
     });

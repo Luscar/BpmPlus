@@ -38,21 +38,7 @@
               "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
-            "scripts": [],
-            "allowedCommonJsDependencies": [
-              "bpmn-js",
-              "diagram-js",
-              "bpmn-moddle",
-              "moddle",
-              "moddle-xml",
-              "ids",
-              "min-dom",
-              "min-dash",
-              "tiny-svg",
-              "inherits",
-              "object-refs",
-              "saxen"
-            ]
+            "scripts": []
           },
           "configurations": {
             "production": {

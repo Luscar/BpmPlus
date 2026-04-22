@@ -9,9 +9,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BpmService } from '../../../core/services/bpm.service';
-import { BpmnService } from '../../../core/services/bpmn.service';
+import { MermaidService } from '../../../core/services/mermaid.service';
 import { DefinitionProcessus } from '../../../core/models/definition.model';
-import { BpmnDiagramComponent } from '../../../shared/components/bpmn-diagram/bpmn-diagram.component';
+import { MermaidDiagramComponent } from '../../../shared/components/mermaid-diagram/mermaid-diagram.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 
 @Component({
@@ -21,7 +21,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
     CommonModule, RouterModule,
     MatCardModule, MatIconModule, MatButtonModule, MatTabsModule,
     MatChipsModule, MatProgressSpinnerModule, MatSnackBarModule,
-    BpmnDiagramComponent, StatusBadgeComponent,
+    MermaidDiagramComponent, StatusBadgeComponent,
   ],
   templateUrl: './definition-detail.component.html',
   styleUrl: './definition-detail.component.scss',
@@ -29,7 +29,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 export class DefinitionDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly bpm = inject(BpmService);
-  private readonly bpmnSvc = inject(BpmnService);
+  private readonly mermaidSvc = inject(MermaidService);
   private readonly snack = inject(MatSnackBar);
 
   cle!: string;
@@ -53,7 +53,7 @@ export class DefinitionDetailComponent implements OnInit {
 
   selectVersion(def: DefinitionProcessus): void {
     this.selected = def;
-    this.diagram = this.bpmnSvc.generateDiagram(def);
+    this.diagram = this.mermaidSvc.generateDiagram(def);
   }
 
   publier(): void {
