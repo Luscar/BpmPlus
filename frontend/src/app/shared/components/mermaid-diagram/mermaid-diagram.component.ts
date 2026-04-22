@@ -14,7 +14,6 @@ let mermaidInitialized = false;
 
 @Component({
   selector: 'app-mermaid-diagram',
-  standalone: true,
   imports: [MatProgressSpinnerModule],
   template: `
     <div class="mermaid-wrapper">

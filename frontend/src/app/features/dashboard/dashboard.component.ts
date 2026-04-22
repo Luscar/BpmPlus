@@ -10,7 +10,6 @@ import { DashboardStats } from '../../core/models/instance.model';
 
 @Component({
   selector: 'app-dashboard',
-  standalone: true,
   imports: [
     CommonModule, RouterModule,
     MatCardModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule,

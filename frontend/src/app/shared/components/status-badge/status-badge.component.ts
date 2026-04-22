@@ -6,7 +6,6 @@ import { StatutDefinition } from '../../../core/models/definition.model';
 
 @Component({
   selector: 'app-status-badge',
-  standalone: true,
   imports: [CommonModule, MatIconModule],
   template: `
     <span class="badge" [class]="badgeClass">
