@@ -81,7 +81,7 @@
           @if (diagram) {
             <mat-card class="diagram-card">
               <mat-card-content>
-                <app-mermaid-diagram [diagram]="diagram" />
+                <app-bpmn-diagram [diagram]="diagram" [currentNodeId]="currentNodeId" />
               </mat-card-content>
             </mat-card>
             <p class="diagram-hint">
