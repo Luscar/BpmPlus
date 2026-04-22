@@ -1,0 +1,19 @@
+@use '@angular/material' as mat;
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: #f8f9fa;
+}
+
+// Scrollbar subtile
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 3px; }
+
+// Mat card global
+mat-card { border-radius: 12px !important; }
+
+// Mat tab content
+.mat-mdc-tab-body-content { overflow: visible !important; }

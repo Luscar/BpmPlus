@@ -1,0 +1,64 @@
+.page { padding: 24px; max-width: 1400px; }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 20px; font-size: 14px; color: #546e7a;
+  .link { display: flex; align-items: center; gap: 4px; text-decoration: none; color: #1565c0; &:hover { text-decoration: underline; } mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+  .sep { font-size: 18px; opacity: .5; }
+}
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.header-left { flex: 1; }
+.page-title { font-size: 28px; font-weight: 300; margin: 0 0 8px; color: #1a237e; }
+.meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.version-selector { display: flex; gap: 4px; }
+.active-version { background: #e8eaf6 !important; border-color: #3f51b5 !important; color: #3f51b5; }
+
+.tabs { margin-top: 8px; }
+.tab-icon { margin-right: 6px; }
+.tab-content { padding: 24px 0; }
+
+.diagram-card { margin-bottom: 16px; }
+
+.legend {
+  display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 0;
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 12px; }
+  .metier       { background: #e8eaf6; color: #283593; }
+  .interactif   { background: #e8f5e9; color: #1b5e20; }
+  .decision     { background: #fff3e0; color: #bf360c; }
+  .attenteTemps  { background: #f3e5f5; color: #4a148c; }
+  .attenteSignal { background: #e0f2f1; color: #004d40; }
+  .sousProcessus { background: #eceff1; color: #263238; }
+  .final        { background: #efebe9; color: #3e2723; }
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+.nodes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; }
+
+.node-card {
+  &.node-start { border-left: 4px solid #43a047; }
+  &.node-final { border-left: 4px solid #795548; opacity: .85; }
+}
+
+.node-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.node-name { font-weight: 500; font-size: 15px; }
+.node-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.node-type-label { font-size: 11px; background: #f5f5f5; color: #616161; padding: 2px 6px; border-radius: 4px; }
+.badge-start { font-size: 11px; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.badge-final { font-size: 11px; background: #efebe9; color: #4e342e; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+.node-icon-NoeudMetier        { color: #3f51b5; }
+.node-icon-NoeudInteractif    { color: #2e7d32; }
+.node-icon-NoeudDecision      { color: #e65100; }
+.node-icon-NoeudAttenteTemps  { color: #6a1b9a; }
+.node-icon-NoeudAttenteSignal { color: #00838f; }
+.node-icon-NoeudSousProcessus { color: #37474f; }
+
+.node-extra { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #546e7a; margin-top: 6px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+
+.node-flows { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.flow-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; background: #e8eaf6; color: #3f51b5; padding: 2px 10px; border-radius: 10px; mat-icon { font-size: 12px; width: 12px; height: 12px; } }
+
+.mono { font-family: monospace; background: #f5f5f5; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.link { color: #1565c0; text-decoration: none; &:hover { text-decoration: underline; } }
+.center { display: flex; justify-content: center; padding: 48px; }
