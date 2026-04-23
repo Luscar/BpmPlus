@@ -161,7 +161,7 @@
       </mat-tab>
 
       <!-- Actions manuelles -->
-      @if (isSuspendue) {
+      @if (isSuspendue || canMigrer) {
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">touch_app</mat-icon> Actions
@@ -253,6 +253,54 @@
                 <mat-card-actions>
                   <button mat-raised-button color="warn" (click)="reprendreTimer()" [disabled]="actionLoading">
                     <mat-icon>fast_forward</mat-icon> Reprendre maintenant
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+
+            <!-- Migration de version -->
+            @if (canMigrer) {
+              <mat-card class="action-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar class="action-icon icon-migration">sync_alt</mat-icon>
+                  <mat-card-title>Migrer vers une nouvelle version</mat-card-title>
+                  <mat-card-subtitle>
+                    Déplace cette instance (actuellement v{{ instance?.versionDefinition }}) vers une autre version publiée de la définition.
+                  </mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <mat-form-field appearance="outline" class="action-field">
+                    <mat-label>Version cible</mat-label>
+                    <mat-icon matPrefix>update</mat-icon>
+                    <input matInput type="number" [formControl]="versionMigrationCtrl"
+                      placeholder="ex: 2" min="1" />
+                  </mat-form-field>
+                  @if (dernierResultatMigration) {
+                    <div [class]="dernierResultatMigration.succes ? 'migration-succes' : 'migration-erreur'">
+                      @if (dernierResultatMigration.succes) {
+                        <mat-icon>check_circle</mat-icon>
+                        Migration réussie : v{{ dernierResultatMigration.ancienneVersion }}
+                        → v{{ dernierResultatMigration.nouvelleVersion }}
+                        @if (dernierResultatMigration.ancienNoeudId !== dernierResultatMigration.nouveauNoeudId) {
+                          (nœud : {{ dernierResultatMigration.ancienNoeudId }} → {{ dernierResultatMigration.nouveauNoeudId }})
+                        }
+                      } @else {
+                        <mat-icon>error</mat-icon>
+                        {{ dernierResultatMigration.messageErreur }}
+                      }
+                    </div>
+                  }
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-raised-button color="accent"
+                    (click)="migrer()"
+                    [disabled]="!versionMigrationCtrl.valid || migrationLoading || actionLoading">
+                    @if (migrationLoading) {
+                      <mat-spinner diameter="20" />
+                    } @else {
+                      <mat-icon>sync_alt</mat-icon>
+                    }
+                    Migrer l'instance
                   </button>
                 </mat-card-actions>
               </mat-card>

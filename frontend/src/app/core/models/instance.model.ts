@@ -72,6 +72,16 @@ export interface ResultatRechercheInstances {
   instances:  InstanceProcessus[];
 }
 
+export interface ResultatMigration {
+  idInstance: number;
+  succes: boolean;
+  ancienneVersion: number;
+  nouvelleVersion: number;
+  ancienNoeudId?: string;
+  nouveauNoeudId?: string;
+  messageErreur?: string;
+}
+
 export interface DashboardStats {
   definitions: {
     total: number;
