@@ -53,6 +53,18 @@
 .icon-interactif { background: #e8f5e9; color: #2e7d32; }
 .icon-signal { background: #e0f2f1; color: #004d40; }
 .icon-timer { background: #f3e5f5; color: #4a148c; }
+.icon-migration { background: #e3f2fd; color: #1565c0; }
+
+.migration-succes {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 8px;
+  background: #e8f5e9; color: #2e7d32; border-radius: 6px; font-size: 13px;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+}
+.migration-erreur {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 8px;
+  background: #ffebee; color: #c62828; border-radius: 6px; font-size: 13px;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+}
 
 // Timeline
 .timeline { padding-left: 8px; }

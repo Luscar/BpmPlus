@@ -9,15 +9,18 @@ namespace BpmPlus.Api.Controllers;
 public class InstancesController : ControllerBase
 {
     private readonly IServiceBpm _bpm;
+    private readonly IServiceMigration _migration;
     private readonly IRepositoryVariable _repoVariable;
     private readonly IRepositoryInstance _repoInstance;
 
     public InstancesController(
         IServiceBpm bpm,
+        IServiceMigration migration,
         IRepositoryVariable repoVariable,
         IRepositoryInstance repoInstance)
     {
         _bpm = bpm;
+        _migration = migration;
         _repoVariable = repoVariable;
         _repoInstance = repoInstance;
     }
@@ -214,6 +217,25 @@ public class InstancesController : ControllerBase
             return BadRequest(new { erreur = ex.Message });
         }
     }
+
+    // ── Migration ─────────────────────────────────────────────────────────────
+
+    [HttpPost("{id:long}/migrer")]
+    public async Task<IActionResult> Migrer(
+        long id,
+        [FromBody] MigrerInstanceRequest req,
+        CancellationToken ct)
+    {
+        try
+        {
+            var resultat = await _migration.MigrerAsync(id, req.VersionCible, req.MappingNoeuds, ct);
+            return Ok(resultat);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { erreur = ex.Message });
+        }
+    }
 }
 
 public record DemarrerInstanceRequest(
@@ -224,3 +246,6 @@ public record DemarrerInstanceRequest(
 public record EnvoyerSignalRequest(string NomSignal);
 public record AssignerRequest(string Logon);
 public record ModifierVariableRequest(object? Valeur);
+public record MigrerInstanceRequest(
+    int VersionCible,
+    Dictionary<string, string>? MappingNoeuds);

@@ -8,6 +8,7 @@ import {
   InstanceEchue,
   InstanceProcessus,
   RechercheInstancesQuery,
+  ResultatMigration,
   ResultatRechercheInstances,
   StatutInstance,
 } from '../models/instance.model';
@@ -120,5 +121,29 @@ export class BpmService {
 
   modifierVariable(id: number, nom: string, valeur: unknown): Observable<void> {
     return this.http.put<void>(`${this.base}/instances/${id}/variables/${nom}`, { valeur });
+  }
+
+  // ── Migration ─────────────────────────────────────────────────────────────
+
+  migrerInstance(
+    id: number,
+    versionCible: number,
+    mappingNoeuds?: Record<string, string>
+  ): Observable<ResultatMigration> {
+    return this.http.post<ResultatMigration>(
+      `${this.base}/instances/${id}/migrer`,
+      { versionCible, mappingNoeuds }
+    );
+  }
+
+  migrerToutesInstances(
+    cle: string,
+    versionCible: number,
+    mappingNoeuds?: Record<string, string>
+  ): Observable<ResultatMigration[]> {
+    return this.http.post<ResultatMigration[]>(
+      `${this.base}/definitions/${cle}/migrer-instances`,
+      { versionCible, mappingNoeuds }
+    );
   }
 }

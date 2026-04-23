@@ -10,13 +10,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { BpmService } from '../../../core/services/bpm.service';
 import { MermaidService } from '../../../core/services/mermaid.service';
-import { InstanceProcessus, EvenementInstance } from '../../../core/models/instance.model';
+import { InstanceProcessus, EvenementInstance, ResultatMigration } from '../../../core/models/instance.model';
 import { DefinitionProcessus } from '../../../core/models/definition.model';
 import { MermaidDiagramComponent } from '../../../shared/components/mermaid-diagram/mermaid-diagram.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
@@ -27,7 +28,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
     CommonModule, RouterModule, ReactiveFormsModule,
     MatCardModule, MatIconModule, MatButtonModule, MatTabsModule,
     MatProgressSpinnerModule, MatSnackBarModule, MatFormFieldModule,
-    MatInputModule, MatTooltipModule, MatDividerModule,
+    MatInputModule, MatSelectModule, MatTooltipModule, MatDividerModule,
     MermaidDiagramComponent, StatusBadgeComponent,
   ],
   templateUrl: './instance-detail.component.html',
@@ -56,6 +57,10 @@ export class InstanceDetailComponent implements OnInit {
   varNomCtrl = new FormControl('', Validators.required);
   varValCtrl = new FormControl('');
   editingVar: string | null = null;
+
+  versionMigrationCtrl = new FormControl<number | null>(null, [Validators.required, Validators.min(1)]);
+  migrationLoading = false;
+  dernierResultatMigration: ResultatMigration | null = null;
 
   readonly objectKeys = Object.keys;
 
@@ -168,6 +173,34 @@ export class InstanceDetailComponent implements OnInit {
   get canTerminerEtape():  boolean { return this.isSuspendue && this.noeudCourantType === 'NoeudInteractif'; }
   get canReprendreTimer(): boolean { return this.isSuspendue && this.noeudCourantType === 'NoeudAttenteTemps'; }
   get canSignal():         boolean { return this.isSuspendue && this.noeudCourantType === 'NoeudAttenteSignal'; }
+  get canMigrer():         boolean {
+    const s = this.instance?.statut;
+    return s === 'Active' || s === 'Suspendue';
+  }
+
+  migrer(): void {
+    if (!this.versionMigrationCtrl.valid || this.versionMigrationCtrl.value === null) return;
+    const version = this.versionMigrationCtrl.value;
+    this.migrationLoading = true;
+    this.dernierResultatMigration = null;
+    this.bpm.migrerInstance(this.id, version).subscribe({
+      next: resultat => {
+        this.dernierResultatMigration = resultat;
+        if (resultat.succes) {
+          this.snack.open(`Migration vers v${version} réussie.`, 'OK', { duration: 4000 });
+          this.charger();
+        } else {
+          this.snack.open(resultat.messageErreur ?? 'Migration échouée.', 'OK', { duration: 6000 });
+        }
+        this.migrationLoading = false;
+      },
+      error: (err: any) => {
+        const msg = err?.error?.erreur ?? 'Erreur lors de la migration.';
+        this.snack.open(msg, 'OK', { duration: 6000 });
+        this.migrationLoading = false;
+      },
+    });
+  }
 
   typeEvenementLabel(type: string): string {
     const map: Record<string, string> = {

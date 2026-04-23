@@ -8,8 +8,13 @@ namespace BpmPlus.Api.Controllers;
 public class DefinitionsController : ControllerBase
 {
     private readonly IServiceBpm _bpm;
+    private readonly IServiceMigration _migration;
 
-    public DefinitionsController(IServiceBpm bpm) => _bpm = bpm;
+    public DefinitionsController(IServiceBpm bpm, IServiceMigration migration)
+    {
+        _bpm = bpm;
+        _migration = migration;
+    }
 
     [HttpGet]
     public async Task<IActionResult> ObtenirTout(CancellationToken ct)
@@ -68,4 +73,25 @@ public class DefinitionsController : ControllerBase
             return BadRequest(new { erreur = ex.Message });
         }
     }
+
+    [HttpPost("{cle}/migrer-instances")]
+    public async Task<IActionResult> MigrerInstances(
+        string cle,
+        [FromBody] MigrerInstancesRequest req,
+        CancellationToken ct)
+    {
+        try
+        {
+            var resultats = await _migration.MigrerToutesAsync(cle, req.VersionCible, req.MappingNoeuds, ct);
+            return Ok(resultats);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { erreur = ex.Message });
+        }
+    }
 }
+
+public record MigrerInstancesRequest(
+    int VersionCible,
+    Dictionary<string, string>? MappingNoeuds);
