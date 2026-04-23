@@ -1,4 +1,3 @@
-using Autofac;
 using BpmPlus.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -6,16 +5,16 @@ namespace BpmPlus.Core.Execution.Executeurs;
 
 public class ExecuteurNoeudMetier
 {
-    private readonly ILifetimeScope _scope;
+    private readonly IBpmServiceResolver _resolver;
     private readonly ResolveurParametre _resolveur;
     private readonly ILogger<ExecuteurNoeudMetier> _logger;
 
     public ExecuteurNoeudMetier(
-        ILifetimeScope scope,
+        IBpmServiceResolver resolver,
         ResolveurParametre resolveur,
         ILogger<ExecuteurNoeudMetier> logger)
     {
-        _scope = scope;
+        _resolver = resolver;
         _resolveur = resolveur;
         _logger = logger;
     }
@@ -28,7 +27,7 @@ public class ExecuteurNoeudMetier
         _logger.LogInformation("Exécution NoeudMetier '{NomCommande}' (nœud '{Id}')",
             noeud.NomCommande, noeud.Id);
 
-        var handler = _scope.ResolveKeyed<IBpmHandlerCommande>(noeud.NomCommande)
+        var handler = _resolver.GetCommande(noeud.NomCommande)
             ?? throw new InvalidOperationException(
                 $"Aucun IBpmHandlerCommande enregistré pour la commande '{noeud.NomCommande}'.");
 
@@ -48,7 +47,7 @@ public class ExecuteurNoeudMetier
         IContexteExecution contexte,
         CancellationToken ct)
     {
-        var handler = _scope.ResolveKeyed<IBpmHandlerCommande>(def.NomCommande)
+        var handler = _resolver.GetCommande(def.NomCommande)
             ?? throw new InvalidOperationException(
                 $"Aucun IBpmHandlerCommande enregistré pour la commande '{def.NomCommande}'.");
 

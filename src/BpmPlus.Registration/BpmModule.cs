@@ -36,6 +36,11 @@ public class BpmModule : Autofac.Module
         // ── Gestion de tâches (optionnelle) ────────────────────────────────────
         RegisterGestionTache(builder);
 
+        // ── Résolveur de services BPM (abstraction sur ILifetimeScope) ─────────
+        builder.RegisterType<AutofacBpmServiceResolver>()
+            .As<IBpmServiceResolver>()
+            .InstancePerLifetimeScope();
+
         // ── Résolveur de paramètres ────────────────────────────────────────────
         builder.RegisterType<ResolveurParametre>()
             .AsSelf()

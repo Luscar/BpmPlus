@@ -1,22 +1,16 @@
-using Autofac;
 using BpmPlus.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace BpmPlus.Core.Execution;
 
-/// <summary>
-/// Résout les ISourceParametre et évalue les ICondition en déléguant les queries
-/// aux handlers enregistrés dans le conteneur Autofac.
-/// L'aggregate id est toujours fourni par IContexteExecution.AggregateId.
-/// </summary>
 public class ResolveurParametre
 {
-    private readonly ILifetimeScope _scope;
+    private readonly IBpmServiceResolver _resolver;
     private readonly ILogger<ResolveurParametre> _logger;
 
-    public ResolveurParametre(ILifetimeScope scope, ILogger<ResolveurParametre> logger)
+    public ResolveurParametre(IBpmServiceResolver resolver, ILogger<ResolveurParametre> logger)
     {
-        _scope = scope;
+        _resolver = resolver;
         _logger = logger;
     }
 
@@ -127,8 +121,8 @@ public class ResolveurParametre
     {
         _logger.LogDebug("Résolution SourceQuery '{NomQuery}'", sq.NomQuery);
 
-        if (!_scope.TryResolveKeyed<IBpmHandlerQuery>(sq.NomQuery, out var handler))
-            throw new InvalidOperationException($"Aucun IBpmHandlerQuery enregistré pour la query '{sq.NomQuery}'.");
+        var handler = _resolver.GetQuery(sq.NomQuery)
+            ?? throw new InvalidOperationException($"Aucun IBpmHandlerQuery enregistré pour la query '{sq.NomQuery}'.");
 
         var parametres = sq.Parametres != null
             ? await ResolveParametresAsync(sq.Parametres, contexte, ct)
@@ -153,8 +147,8 @@ public class ResolveurParametre
     {
         _logger.LogDebug("Évaluation ConditionQuery '{NomQuery}'", cq.NomQuery);
 
-        if (!_scope.TryResolveKeyed<IBpmHandlerQuery<bool>>(cq.NomQuery, out var handler))
-            throw new InvalidOperationException($"Aucun IBpmHandlerQuery<bool> enregistré pour la query '{cq.NomQuery}'.");
+        var handler = _resolver.GetQuery<bool>(cq.NomQuery)
+            ?? throw new InvalidOperationException($"Aucun IBpmHandlerQuery<bool> enregistré pour la query '{cq.NomQuery}'.");
 
         var parametres = cq.Parametres != null
             ? await ResolveParametresAsync(cq.Parametres, contexte, ct)
