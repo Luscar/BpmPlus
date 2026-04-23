@@ -40,17 +40,17 @@
   mat-nav-list { padding-top: 8px; }
 
   a[mat-list-item] {
-    color: rgba(255,255,255,.75);
+    color: white;
     border-radius: 0 24px 24px 0;
     margin-right: 12px;
     margin-bottom: 2px;
 
-    &:hover { background: rgba(255,255,255,.12); color: white; }
+    &:hover { background: rgba(255,255,255,.18); color: white; }
 
     &.active-link {
-      background: rgba(255,255,255,.2);
+      background: rgba(255,255,255,.28);
       color: white;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     mat-icon { color: inherit; }
