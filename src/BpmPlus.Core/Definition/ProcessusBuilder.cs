@@ -239,6 +239,34 @@ public class InteractifBuilder : NoeudBuilder<InteractifBuilder, NoeudInteractif
         return this;
     }
 
+    /// <summary>Code de rôle requis pour la tâche (ex. "RESPONSABLE").</summary>
+    public InteractifBuilder CodeRole(string codeRole)
+    {
+        _tache.CodeRole = codeRole;
+        return this;
+    }
+
+    /// <summary>Code identifiant le type de tâche dans le système externe.</summary>
+    public InteractifBuilder CodeTache(string codeTache)
+    {
+        _tache.CodeTache = codeTache;
+        return this;
+    }
+
+    /// <summary>Indique que la tâche est une révision (IndTacheRevision = true).</summary>
+    public InteractifBuilder TacheRevision(bool valeur = true)
+    {
+        _tache.IndTacheRevision = valeur;
+        return this;
+    }
+
+    /// <summary>Logon de l'auteur de l'élément soumis à la tâche.</summary>
+    public InteractifBuilder LogonAuteur(string logon)
+    {
+        _tache.LogonAuteur = logon;
+        return this;
+    }
+
     /// <summary>Commande exécutée à la suspension. Nom par défaut : PascalCase(id) + "PreCommand".</summary>
     public InteractifBuilder CommandePre(string? nom = null, Action<CommandeBuilder>? config = null)
     {
@@ -257,16 +285,22 @@ public class InteractifBuilder : NoeudBuilder<InteractifBuilder, NoeudInteractif
         return this;
     }
 
-    public override NoeudInteractif Build() => new()
+    public override NoeudInteractif Build()
     {
-        Id              = _id,
-        Nom             = _nom,
-        EstFinale       = _final,
-        FluxSortants    = _flux,
-        DefinitionTache = _tache,
-        CommandePre     = _commandePre,
-        CommandePost    = _commandePost
-    };
+        // NomNoeud est renseigné automatiquement depuis le nom (ou l'id si pas de nom).
+        _tache.NomNoeud = string.IsNullOrWhiteSpace(_nom) ? _id : _nom;
+
+        return new NoeudInteractif
+        {
+            Id              = _id,
+            Nom             = _nom,
+            EstFinale       = _final,
+            FluxSortants    = _flux,
+            DefinitionTache = _tache,
+            CommandePre     = _commandePre,
+            CommandePost    = _commandePost
+        };
+    }
 }
 
 // ── DecisionBuilder ───────────────────────────────────────────────────────────

@@ -19,9 +19,14 @@ public class GestionTache : IGestionTache
         var idTache = ++_compteur;
 
         Console.WriteLine($"  |   [GestionTache] Tâche créée #{idTache}");
-        Console.WriteLine($"  |                  Titre       : {definitionTache.Titre}");
-        Console.WriteLine($"  |                  Description : {definitionTache.Description}");
-        Console.WriteLine($"  |                  Agrégat     : commande #{instance.AggregateId}");
+        Console.WriteLine($"  |                  Titre            : {definitionTache.Titre}");
+        Console.WriteLine($"  |                  Description      : {definitionTache.Description}");
+        Console.WriteLine($"  |                  NomNoeud         : {definitionTache.NomNoeud}");
+        Console.WriteLine($"  |                  CodeRole         : {definitionTache.CodeRole}");
+        Console.WriteLine($"  |                  CodeTache        : {definitionTache.CodeTache}");
+        Console.WriteLine($"  |                  IndTacheRevision : {definitionTache.IndTacheRevision}");
+        Console.WriteLine($"  |                  LogonAuteur      : {definitionTache.LogonAuteur}");
+        Console.WriteLine($"  |                  Agrégat          : commande #{instance.AggregateId}");
 
         return Task.FromResult(idTache);
     }

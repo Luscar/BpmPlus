@@ -278,11 +278,22 @@ Parametres          : Dictionary<string, ISourceParametre>  // Paramètres addit
 **Propriétés de définition :**
 
 ```
-DefinitionTache     : DefinitionTache               // Métadonnées pour IGestionTache (nom, description, etc.)
-  └ LogonAuto       : string?                       // Logon assigné automatiquement à la création de la tâche
-CommandePre         : DefinitionCommande?           // Commande optionnelle avant suspension
-CommandePost        : DefinitionCommande?           // Commande optionnelle à la complétion
+DefinitionTache       : DefinitionTache             // Métadonnées transmises à IGestionTache lors de la création
+  ├ Titre             : string                      // Titre de la tâche
+  ├ Description       : string?                     // Description détaillée
+  ├ Categorie         : string?                     // Catégorie libre
+  ├ LogonAuto         : string?                     // Logon assigné automatiquement à la création de la tâche
+  ├ CodeRole          : string?                     // Code du rôle requis (ex. "RESPONSABLE", "VALIDATEUR")
+  ├ CodeTache         : string?                     // Code identifiant le type de tâche dans le système externe
+  ├ NomNoeud          : string?                     // Renseigné automatiquement par le moteur (nom ou id du nœud)
+  ├ IndTacheRevision  : bool                        // true si la tâche est une révision d'un élément existant
+  └ LogonAuteur       : string?                     // Logon de l'auteur de l'élément soumis à la tâche
+CommandePre           : DefinitionCommande?         // Commande optionnelle avant suspension
+CommandePost          : DefinitionCommande?         // Commande optionnelle à la complétion
 ```
+
+> **`NomNoeud` automatique :** le moteur renseigne `DefinitionTache.NomNoeud` lors du `Build()` du builder.
+> La valeur est le `Nom` du nœud si non vide, sinon son `Id`.
 
 -----
 

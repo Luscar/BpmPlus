@@ -299,10 +299,15 @@ public class MaGestionTache : IGestionTache
         // Créer la tâche dans votre système (base de données, API externe, etc.)
         var idTache = await _tacheService.CreerAsync(new Tache
         {
-            Titre       = definitionTache.Titre,
-            Description = definitionTache.Description,
-            Categorie   = definitionTache.Categorie,
-            AggregateId = instance.AggregateId
+            Titre            = definitionTache.Titre,
+            Description      = definitionTache.Description,
+            Categorie        = definitionTache.Categorie,
+            NomNoeud         = definitionTache.NomNoeud,         // renseigné automatiquement par le moteur
+            CodeRole         = definitionTache.CodeRole,
+            CodeTache        = definitionTache.CodeTache,
+            IndTacheRevision = definitionTache.IndTacheRevision,
+            LogonAuteur      = definitionTache.LogonAuteur,
+            AggregateId      = instance.AggregateId
         }, ct);
 
         return idTache;
@@ -369,6 +374,10 @@ var definition = new DefinitionProcessusBuilder("approbation-commande",
 | `.CommandeNommee("NomExplicite")` | Surcharge le nom de commande (déroge à la convention) |
 | `.DefinirTache("titre", "description")` | Raccourci sans sous-builder |
 | `.LogonAuto("logon")` | Assignation automatique du logon à l'arrivée sur le nœud interactif |
+| `.CodeRole("CODE")` | Code de rôle requis pour la tâche |
+| `.CodeTache("CODE")` | Code identifiant le type de tâche dans le système externe |
+| `.TacheRevision()` | Marque la tâche comme révision (`IndTacheRevision = true`) |
+| `.LogonAuteur("logon")` | Logon de l'auteur de l'élément soumis à la tâche |
 | `.SortiesVariables("a", "b")` | Plusieurs variables de sortie en un appel |
 | `.SiEgal("x", val)` | `SiVariable(..., Operateur.Egal, ...)` |
 | `.SiDifferent("x", val)` | `SiVariable(..., Operateur.Different, ...)` |
@@ -565,6 +574,8 @@ Un nœud interactif peut se voir attribuer un logon **à la conception** via `Lo
 .Interactif("validation-responsable", b => b
     .Tache("Valider le dossier", "Vérifier les pièces justificatives")
     .LogonAuto("chef.service@corp.com")   // assignation auto à l'arrivée sur le nœud
+    .CodeRole("RESPONSABLE")              // rôle requis pour la tâche
+    .CodeTache("VALID-DOSSIER")           // type de tâche dans le système externe
     .Vers("archivage"))
 ```
 
@@ -573,13 +584,18 @@ Un nœud interactif peut se voir attribuer un logon **à la conception** via `Lo
 {
   "id": "validation-responsable",
   "type": "NoeudInteractif",
+  "nom": "Validation responsable",
   "definitionTache": {
     "titre": "Valider le dossier",
     "description": "Vérifier les pièces justificatives",
-    "logonAuto": "chef.service@corp.com"
+    "logonAuto": "chef.service@corp.com",
+    "codeRole": "RESPONSABLE",
+    "codeTache": "VALID-DOSSIER"
   }
 }
 ```
+
+> **`NomNoeud` automatique :** le moteur renseigne automatiquement `DefinitionTache.NomNoeud` à partir du nom du nœud (ou de son id si aucun nom n'est défini). Il n'est pas nécessaire de le préciser manuellement.
 
 ### Affectation manuelle
 
