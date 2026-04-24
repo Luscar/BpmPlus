@@ -236,7 +236,11 @@ internal class GestionTacheNulle : IGestionTache
         CancellationToken ct = default)
         => Task.FromResult(0L);
 
-    public Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default)
+    public Task FermerTacheAsync(
+        long idTacheExterne,
+        InstanceProcessus instance,
+        IReadOnlyDictionary<string, object?> variables,
+        CancellationToken ct = default)
         => Task.CompletedTask;
 
     public Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)

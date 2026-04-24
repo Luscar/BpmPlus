@@ -177,7 +177,7 @@ public class ServiceBpm : IServiceBpm
             Resultat = ResultatEvenement.Succes
         }, ct);
 
-        var resultat = await _executeurInteractif.CompleterAsync(noeud, idTacheExterne, contexte, ct);
+        var resultat = await _executeurInteractif.CompleterAsync(noeud, idTacheExterne, instance, contexte, ct);
         await ContinuerApresReprise(resultat, instance, definition, noeudId, accesseur, contexte, ct);
     }
 

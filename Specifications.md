@@ -272,7 +272,8 @@ Parametres          : Dictionary<string, ISourceParametre>  // Paramètres addit
 
 1. Vérification que l’instance est bien suspendue sur ce nœud.
 1. Si `CommandePost` est définie → exécution de la commande POST.
-1. Appel à `IGestionTache.FermerTacheAsync(idTacheExterne)`.
+1. Appel à `IGestionTache.FermerTacheAsync(idTacheExterne, instance, variables)`.  
+   `variables` est le snapshot **après** la CommandePost — les variables écrites par la commande sont donc disponibles.
 1. L’instance reprend, passe au nœud suivant.
 
 **Propriétés de définition :**
@@ -605,8 +606,14 @@ public interface IGestionTache
     /// <summary>
     /// Ferme la tâche externe lors de la complétion d'un NoeudInteractif.
     /// Appelé dans la même transaction que la reprise de l'instance.
+    /// Les variables sont le snapshot de l'instance au moment de la complétion,
+    /// après exécution de la CommandePost si définie.
     /// </summary>
-    Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default);
+    Task FermerTacheAsync(
+        long idTacheExterne,
+        InstanceProcessus instance,
+        IReadOnlyDictionary<string, object?> variables,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Assigne la tâche à un utilisateur ou groupe (logon).

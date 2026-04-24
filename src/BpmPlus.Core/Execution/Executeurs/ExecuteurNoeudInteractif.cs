@@ -64,6 +64,7 @@ public class ExecuteurNoeudInteractif
     public async Task<ResultatNoeud> CompleterAsync(
         NoeudInteractif noeud,
         long? idTacheExterne,
+        InstanceProcessus instance,
         IContexteExecution contexte,
         CancellationToken ct)
     {
@@ -77,7 +78,8 @@ public class ExecuteurNoeudInteractif
         }
 
         if (_gestionTache is not null && idTacheExterne is not null)
-            await _gestionTache.FermerTacheAsync(idTacheExterne.Value, ct);
+            await _gestionTache.FermerTacheAsync(
+                idTacheExterne.Value, instance, contexte.Variables.ObtenirToutes(), ct);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);

@@ -19,7 +19,14 @@ public interface IGestionTache
     /// Ferme la tâche externe lors de la complétion d'un NoeudInteractif.
     /// Appelé dans la même transaction que la reprise de l'instance.
     /// </summary>
-    Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default);
+    /// <param name="idTacheExterne">Identifiant de la tâche retourné par <see cref="CreerTacheAsync"/>.</param>
+    /// <param name="instance">Instance de processus au moment de la complétion.</param>
+    /// <param name="variables">Snapshot des variables de l'instance au moment de la complétion.</param>
+    Task FermerTacheAsync(
+        long idTacheExterne,
+        InstanceProcessus instance,
+        IReadOnlyDictionary<string, object?> variables,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Assigne la tâche à un utilisateur ou groupe.
