@@ -31,9 +31,16 @@ public class GestionTache : IGestionTache
         return Task.FromResult(idTache);
     }
 
-    public Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default)
+    public Task FermerTacheAsync(
+        long idTacheExterne,
+        InstanceProcessus instance,
+        IReadOnlyDictionary<string, object?> variables,
+        CancellationToken ct = default)
     {
         Console.WriteLine($"  |   [GestionTache] Tâche #{idTacheExterne} fermée.");
+        Console.WriteLine($"  |                  Agrégat   : commande #{instance.AggregateId}");
+        foreach (var (nom, valeur) in variables)
+            Console.WriteLine($"  |                  Variable  : {nom} = {valeur}");
         return Task.CompletedTask;
     }
 

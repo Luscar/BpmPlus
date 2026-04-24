@@ -313,9 +313,16 @@ public class MaGestionTache : IGestionTache
         return idTache;
     }
 
-    public async Task FermerTacheAsync(long idTacheExterne, CancellationToken ct = default)
+    public async Task FermerTacheAsync(
+        long idTacheExterne,
+        InstanceProcessus instance,
+        IReadOnlyDictionary<string, object?> variables,
+        CancellationToken ct = default)
     {
-        await _tacheService.FermerAsync(idTacheExterne, ct);
+        // variables contient le snapshot des variables de l'instance au moment de la complétion
+        var statut = variables.TryGetValue("statut", out var v) ? v?.ToString() : null;
+
+        await _tacheService.FermerAsync(idTacheExterne, statut, ct);
     }
 
     public async Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)
