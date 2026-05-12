@@ -34,6 +34,11 @@ public interface IServiceBpm
         StatutInstance statut,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariablesAsync(
+        IReadOnlyList<FiltreVariable> filtres,
+        StatutInstance? statut = null,
+        CancellationToken ct = default);
+
     Task<IReadOnlyList<InstanceProcessus>> ObtenirInstancesSuspenduesAsync(
         CancellationToken ct = default);
 

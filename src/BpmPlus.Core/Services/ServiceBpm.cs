@@ -137,6 +137,15 @@ public class ServiceBpm : IServiceBpm
         return await _repoInstance.RechercherParVariableAsync(nomVariable, valeurSerialisee, statut, ct);
     }
 
+    public Task<IReadOnlyList<InstanceProcessus>> RechercherParVariablesAsync(
+        IReadOnlyList<FiltreVariable> filtres, StatutInstance? statut = null, CancellationToken ct = default)
+    {
+        var filtresSer = filtres
+            .Select(f => new FiltreVariableSerialisee(f.NomVariable, SerialiserValeur(f.Valeur), f.Operateur))
+            .ToList();
+        return _repoInstance.RechercherParVariablesAsync(filtresSer, statut, ct);
+    }
+
     public Task<IReadOnlyList<InstanceProcessus>> ObtenirInstancesSuspenduesAsync(CancellationToken ct = default)
         => _repoInstance.ObtenirParStatutAsync(StatutInstance.Suspendue, ct);
 
