@@ -11,6 +11,7 @@ public interface IRepositoryInstance
     Task<IReadOnlyList<InstanceProcessus>> ObtenirEnfantsAsync(long idParent, CancellationToken ct = default);
     Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(string nomVariable, string valeurSerialisee, CancellationToken ct = default);
     Task<IReadOnlyList<InstanceProcessus>> RechercherParVariableAsync(string nomVariable, string valeurSerialisee, StatutInstance statut, CancellationToken ct = default);
+    Task<IReadOnlyList<InstanceProcessus>> RechercherParVariablesAsync(IReadOnlyList<FiltreVariableSerialisee> filtres, StatutInstance? statut = null, CancellationToken ct = default);
     Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(CancellationToken ct = default);
     Task<IReadOnlyList<InstanceProcessus>> ObtenirParStatutAsync(StatutInstance statut, CancellationToken ct = default);
     Task MettreAJourStatutAsync(long id, StatutInstance statut, string? idNoeudCourant, DateTime? dateFin, CancellationToken ct = default);

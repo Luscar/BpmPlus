@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text;
 using BpmPlus.Abstractions;
 using BpmPlus.Core.Persistance;
 using Dapper;
@@ -112,6 +113,51 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
             """, new { Nom = nomVariable, Valeur = valeurSerialisee, Statut = statut.ToString() });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
+
+    public async Task<IReadOnlyList<InstanceProcessus>> RechercherParVariablesAsync(
+        IReadOnlyList<FiltreVariableSerialisee> filtres, StatutInstance? statut = null, CancellationToken ct = default)
+    {
+        var sql = new StringBuilder($"SELECT * FROM {T("INSTANCE_PROCESSUS")} i WHERE");
+        var dp = new DynamicParameters();
+
+        for (int i = 0; i < filtres.Count; i++)
+        {
+            var f = filtres[i];
+            var nomParam = $"Nom{i}";
+            var valParam = $"Valeur{i}";
+            var valeur = f.Operateur == Operateur.Contient ? $"%{f.ValeurSerialisee}%" : f.ValeurSerialisee;
+
+            if (i > 0) sql.Append(" AND");
+            sql.Append($" EXISTS (SELECT 1 FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = i.ID AND NOM = @{nomParam} AND VALEUR {OperateurVersSql(f.Operateur)} @{valParam})");
+            dp.Add(nomParam, f.NomVariable);
+            dp.Add(valParam, valeur);
+        }
+
+        if (statut.HasValue)
+        {
+            if (filtres.Count == 0) sql.Append(" i.STATUT = @Statut");
+            else sql.Append(" AND i.STATUT = @Statut");
+            dp.Add("Statut", statut.Value.ToString());
+        }
+        else if (filtres.Count == 0)
+        {
+            sql.Append(" 1=1");
+        }
+
+        var rows = await Cn.QueryAsync(sql.ToString(), dp);
+        return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
+    }
+
+    private static string OperateurVersSql(Operateur op) => op switch
+    {
+        Operateur.Different => "<>",
+        Operateur.Superieur => ">",
+        Operateur.Inferieur => "<",
+        Operateur.SuperieurOuEgal => ">=",
+        Operateur.InferieurOuEgal => "<=",
+        Operateur.Contient => "LIKE",
+        _ => "="
+    };
 
     public async Task<IReadOnlyList<InstanceProcessus>> ObtenirParStatutAsync(
         StatutInstance statut, CancellationToken ct = default)
