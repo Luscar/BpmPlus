@@ -395,6 +395,10 @@ public class ServiceBpm : IServiceBpm
             ?? throw new EtatInstanceInvalideException(idInstance, instance.Statut,
                 $"Le nœud courant '{noeudId}' n'est pas un NoeudAttenteSignal.");
 
+        if (noeud.NomSignal != nomSignal)
+            throw new EtatInstanceInvalideException(idInstance, instance.Statut,
+                $"L'instance {idInstance} attend le signal '{noeud.NomSignal}' mais a reçu '{nomSignal}'.");
+
         var variables = await _repoVariable.ChargerToutesAsync(idInstance, ct);
         var accesseur = new AccesseurVariables(variables);
         var contexte = new ContexteExecution(

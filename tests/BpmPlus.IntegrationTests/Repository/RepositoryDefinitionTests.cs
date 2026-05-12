@@ -2,6 +2,7 @@ using BpmPlus.Abstractions;
 using BpmPlus.Core.Definition;
 using BpmPlus.IntegrationTests.Fixtures;
 using FluentAssertions;
+using Xunit;
 
 namespace BpmPlus.IntegrationTests.Repository;
 
