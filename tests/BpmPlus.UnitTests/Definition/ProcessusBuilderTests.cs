@@ -111,7 +111,7 @@ public class ProcessusBuilderTests
         decision.FluxSortants.Should().HaveCount(2);
         decision.FluxSortants.Should().ContainSingle(f => f.EstParDefaut);
         decision.FluxSortants.Should().ContainSingle(f =>
-            f.Condition is ConditionVariable cv && cv.Operateur == Operateur.Egal);
+            f.Condition is ConditionVariable && ((ConditionVariable)f.Condition).Operateur == Operateur.Egal);
     }
 
     [Fact]

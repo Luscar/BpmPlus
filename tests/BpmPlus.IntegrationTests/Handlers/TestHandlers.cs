@@ -17,6 +17,22 @@ public class NoOpCommand : IBpmHandlerCommande
         => Task.CompletedTask;
 }
 
+public class TacheCommand : IBpmHandlerCommande
+{
+    public string NomCommande => "TacheCommand";
+    public Task ExecuterAsync(long idInstance, long? aggregateId,
+        IReadOnlyDictionary<string, object?> parametres, IContexteExecution contexte)
+        => Task.CompletedTask;
+}
+
+public class FinCommand : IBpmHandlerCommande
+{
+    public string NomCommande => "FinCommand";
+    public Task ExecuterAsync(long idInstance, long? aggregateId,
+        IReadOnlyDictionary<string, object?> parametres, IContexteExecution contexte)
+        => Task.CompletedTask;
+}
+
 /// <summary>
 /// Handler qui définit une variable dans le contexte d'exécution.
 /// Lit la clé "nom" et la valeur "valeur" dans les paramètres.
