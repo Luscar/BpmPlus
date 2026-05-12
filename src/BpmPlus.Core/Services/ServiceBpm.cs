@@ -165,8 +165,6 @@ public class ServiceBpm : IServiceBpm
             idInstance, instance.CleDefinition, instance.VersionDefinition,
             instance.AggregateId, accesseur, ct);
 
-        var idTacheExterne = await ExtraireIdTacheExterneAsync(idInstance, ct);
-
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
             IdInstance = idInstance,
@@ -177,7 +175,7 @@ public class ServiceBpm : IServiceBpm
             Resultat = ResultatEvenement.Succes
         }, ct);
 
-        var resultat = await _executeurInteractif.CompleterAsync(noeud, idTacheExterne, instance, contexte, ct);
+        var resultat = await _executeurInteractif.CompleterAsync(noeud, instance, contexte, ct);
         await ContinuerApresReprise(resultat, instance, definition, noeudId, accesseur, contexte, ct);
     }
 
@@ -317,8 +315,8 @@ public class ServiceBpm : IServiceBpm
 
     // ── Tâches ────────────────────────────────────────────────────────────────
 
-    public Task<long?> ObtenirIdTacheActiveAsync(long idInstance, CancellationToken ct = default)
-        => ExtraireIdTacheExterneAsync(idInstance, ct);
+    public async Task<long?> ObtenirIdTacheActiveAsync(long idInstance, CancellationToken ct = default)
+        => await EstSuspenduTacheInteractiveAsync(idInstance, ct) ? idInstance : null;
 
     public async Task<string?> ObtenirLogonTacheActiveAsync(long idInstance, CancellationToken ct = default)
     {
@@ -346,9 +344,8 @@ public class ServiceBpm : IServiceBpm
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 
-        var idTacheExterne = await ExtraireIdTacheExterneAsync(idInstance, ct);
-        if (idTacheExterne is not null)
-            await _gestionTache.AssignerTacheAsync(idTacheExterne.Value, logon, ct);
+        if (await EstSuspenduTacheInteractiveAsync(idInstance, ct))
+            await _gestionTache.AssignerTacheAsync(idInstance, logon, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
@@ -471,23 +468,19 @@ public class ServiceBpm : IServiceBpm
             instance.CleDefinition, instance.VersionDefinition, ct)
             ?? throw new DefinitionIntrouvableException(instance.CleDefinition, instance.VersionDefinition);
 
-    private async Task<long?> ExtraireIdTacheExterneAsync(long idInstance, CancellationToken ct)
+    private async Task<bool> EstSuspenduTacheInteractiveAsync(long idInstance, CancellationToken ct)
     {
         var derniereSuspension = await _repoEvenement.ObtenirDernierSuspensionAsync(idInstance, ct);
-        if (derniereSuspension?.Detail is null) return null;
+        if (derniereSuspension?.Detail is null) return false;
 
         try
         {
             using var doc = JsonDocument.Parse(derniereSuspension.Detail);
-            if (doc.RootElement.TryGetProperty("idTacheExterne", out var el))
-            {
-                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt64(out var id))
-                    return id;
-            }
+            return !doc.RootElement.TryGetProperty("typeAttente", out _);
         }
         catch (JsonException) { }
 
-        return null;
+        return false;
     }
 
     private static string SerialiserValeur(object valeur)

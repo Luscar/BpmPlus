@@ -231,18 +231,17 @@ public class BpmModule : Autofac.Module
 /// </summary>
 internal class GestionTacheNulle : IGestionTache
 {
-    public Task<long> CreerTacheAsync(
+    public Task CreerTacheAsync(
         DefinitionTache definitionTache, InstanceProcessus instance,
         CancellationToken ct = default)
-        => Task.FromResult(0L);
+        => Task.CompletedTask;
 
     public Task FermerTacheAsync(
-        long idTacheExterne,
         InstanceProcessus instance,
         IReadOnlyDictionary<string, object?> variables,
         CancellationToken ct = default)
         => Task.CompletedTask;
 
-    public Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)
+    public Task AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
         => Task.CompletedTask;
 }
