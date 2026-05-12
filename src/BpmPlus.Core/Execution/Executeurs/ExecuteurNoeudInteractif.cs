@@ -35,16 +35,15 @@ public class ExecuteurNoeudInteractif
             await _executeurCommande.ExecuterDefinitionCommandeAsync(noeud.CommandePre, contexte, ct);
         }
 
-        long? idTacheExterne = null;
         string? logon = null;
         if (_gestionTache is not null)
         {
-            idTacheExterne = await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
-            _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée : {IdTache}", noeud.Id, idTacheExterne);
+            await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
+            _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée pour instance {IdInstance}", noeud.Id, instance.Id);
 
             if (noeud.DefinitionTache.LogonAuto is not null)
             {
-                await _gestionTache.AssignerTacheAsync(idTacheExterne.Value, noeud.DefinitionTache.LogonAuto, ct);
+                await _gestionTache.AssignerTacheAsync(instance.Id, noeud.DefinitionTache.LogonAuto, ct);
                 logon = noeud.DefinitionTache.LogonAuto;
                 _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
             }
@@ -52,7 +51,6 @@ public class ExecuteurNoeudInteractif
 
         var detail = System.Text.Json.JsonSerializer.Serialize(new
         {
-            idTacheExterne,
             noeudId = noeud.Id,
             logon
         });
@@ -63,7 +61,6 @@ public class ExecuteurNoeudInteractif
     /// <summary>Complétion de la tâche — exécute POST, ferme la tâche, reprend le flux.</summary>
     public async Task<ResultatNoeud> CompleterAsync(
         NoeudInteractif noeud,
-        long? idTacheExterne,
         InstanceProcessus instance,
         IContexteExecution contexte,
         CancellationToken ct)
@@ -77,9 +74,8 @@ public class ExecuteurNoeudInteractif
             await _executeurCommande.ExecuterDefinitionCommandeAsync(noeud.CommandePost, contexte, ct);
         }
 
-        if (_gestionTache is not null && idTacheExterne is not null)
-            await _gestionTache.FermerTacheAsync(
-                idTacheExterne.Value, instance, contexte.Variables.ObtenirToutes(), ct);
+        if (_gestionTache is not null)
+            await _gestionTache.FermerTacheAsync(instance, contexte.Variables.ObtenirToutes(), ct);
 
         if (noeud.EstFinale)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);

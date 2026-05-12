@@ -9,16 +9,12 @@ namespace BpmPlus.ExempleClient;
 /// </summary>
 public class GestionTache : IGestionTache
 {
-    private static long _compteur;
-
-    public Task<long> CreerTacheAsync(
+    public Task CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
         CancellationToken ct = default)
     {
-        var idTache = ++_compteur;
-
-        Console.WriteLine($"  |   [GestionTache] Tâche créée #{idTache}");
+        Console.WriteLine($"  |   [GestionTache] Tâche créée — processus #{instance.Id}");
         Console.WriteLine($"  |                  Titre            : {definitionTache.Titre}");
         Console.WriteLine($"  |                  Description      : {definitionTache.Description}");
         Console.WriteLine($"  |                  NomNoeud         : {definitionTache.NomNoeud}");
@@ -28,25 +24,24 @@ public class GestionTache : IGestionTache
         Console.WriteLine($"  |                  LogonAuteur      : {definitionTache.LogonAuteur}");
         Console.WriteLine($"  |                  Agrégat          : commande #{instance.AggregateId}");
 
-        return Task.FromResult(idTache);
+        return Task.CompletedTask;
     }
 
     public Task FermerTacheAsync(
-        long idTacheExterne,
         InstanceProcessus instance,
         IReadOnlyDictionary<string, object?> variables,
         CancellationToken ct = default)
     {
-        Console.WriteLine($"  |   [GestionTache] Tâche #{idTacheExterne} fermée.");
+        Console.WriteLine($"  |   [GestionTache] Tâche fermée — processus #{instance.Id}");
         Console.WriteLine($"  |                  Agrégat   : commande #{instance.AggregateId}");
         foreach (var (nom, valeur) in variables)
             Console.WriteLine($"  |                  Variable  : {nom} = {valeur}");
         return Task.CompletedTask;
     }
 
-    public Task AssignerTacheAsync(long idTacheExterne, string assignee, CancellationToken ct = default)
+    public Task AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
     {
-        Console.WriteLine($"  |   [GestionTache] Tâche #{idTacheExterne} assignée à {assignee}.");
+        Console.WriteLine($"  |   [GestionTache] Tâche assignée — processus #{idProcessus} → {assignee}");
         return Task.CompletedTask;
     }
 }
