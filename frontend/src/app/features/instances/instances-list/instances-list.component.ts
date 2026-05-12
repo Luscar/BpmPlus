@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,11 +25,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { BpmService } from '../../../core/services/bpm.service';
 import {
+  FiltreVariable,
   InstanceProcessus,
+  OperateurVariable,
   RechercheInstancesQuery,
   ResultatRechercheInstances,
   StatutInstance,
@@ -38,6 +39,20 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
 const STATUTS_LABELS: Record<StatutInstance, string> = {
   Active: 'Active', Suspendue: 'Suspendue', EnErreur: 'En erreur', Terminee: 'Terminée',
+};
+
+type FiltreActifItem = { label: string; retirer: () => void };
+
+const OPERATEUR_LABELS: Record<OperateurVariable, string> = {
+  Egal:            '=',
+  DifferentDe:     '≠',
+  Contient:        'contient',
+  CommencePar:     'commence par',
+  TerminePar:      'se termine par',
+  SuperieurA:      '>',
+  SuperieurOuEgal: '≥',
+  InferieurA:      '<',
+  InferieurOuEgal: '≤',
 };
 
 const TAILLE_PAR_DEFAUT = 25;
@@ -53,7 +68,7 @@ const DEBOUNCE_MS = 400;
     MatDatepickerModule, MatNativeDateModule,
     MatPaginatorModule, MatSortModule,
     MatTooltipModule, MatExpansionModule,
-    MatCheckboxModule, MatChipsModule, MatDividerModule,
+    MatCheckboxModule, MatChipsModule,
     StatusBadgeComponent,
   ],
   templateUrl: './instances-list.component.html',
@@ -81,27 +96,51 @@ export class InstancesListComponent implements OnInit, OnDestroy {
   readonly toutesStatuts = Object.keys(STATUTS_LABELS) as StatutInstance[];
   readonly taillesPage   = [10, 25, 50, 100, 200];
 
+  readonly operateurs: { valeur: OperateurVariable; label: string }[] = [
+    { valeur: 'Egal',            label: '= égal à' },
+    { valeur: 'DifferentDe',     label: '≠ différent de' },
+    { valeur: 'Contient',        label: 'contient' },
+    { valeur: 'CommencePar',     label: 'commence par' },
+    { valeur: 'TerminePar',      label: 'se termine par' },
+    { valeur: 'SuperieurA',      label: '> supérieur à' },
+    { valeur: 'SuperieurOuEgal', label: '≥ supérieur ou égal' },
+    { valeur: 'InferieurA',      label: '< inférieur à' },
+    { valeur: 'InferieurOuEgal', label: '≤ inférieur ou égal' },
+  ];
+
   readonly displayedColumns = [
     'id', 'aggregateId', 'definition', 'statut', 'noeud', 'parent',
     'dateDebut', 'dateMaj', 'actions',
   ];
 
-  // Nombre de filtres actifs (pour badge sur le titre)
   get nbFiltresActifs(): number {
     return this.filtresActifs.length;
   }
 
-  get filtresActifs(): string[] {
+  get filtresActifs(): FiltreActifItem[] {
     const v = this.form.value;
-    const f: string[] = [];
-    if (v.statuts?.length)          f.push(`Statuts: ${v.statuts.join(', ')}`);
-    if (v.cleDefinition?.trim())    f.push(`Définition: ${v.cleDefinition}`);
-    if (v.aggregateId)              f.push(`Aggregate: ${v.aggregateId}`);
-    if (v.idNoeudCourant?.trim())   f.push(`Nœud: ${v.idNoeudCourant}`);
-    if (v.dateDebutMin)             f.push(`Depuis: ${this.formatDate(v.dateDebutMin)}`);
-    if (v.dateDebutMax)             f.push(`Jusqu'à: ${this.formatDate(v.dateDebutMax)}`);
-    if (v.racinesSeulement)         f.push('Racines seulement');
-    if (v.nomVariable?.trim())      f.push(`Var: ${v.nomVariable}=${v.valeurVariable}`);
+    const f: FiltreActifItem[] = [];
+    if (v.statuts?.length)
+      f.push({ label: `Statuts: ${v.statuts.join(', ')}`, retirer: () => this.form.patchValue({ statuts: [] }) });
+    if (v.cleDefinition?.trim())
+      f.push({ label: `Définition: ${v.cleDefinition}`, retirer: () => this.form.patchValue({ cleDefinition: '' }) });
+    if (v.aggregateId)
+      f.push({ label: `Aggregate: ${v.aggregateId}`, retirer: () => this.form.patchValue({ aggregateId: null }) });
+    if (v.idNoeudCourant?.trim())
+      f.push({ label: `Nœud: ${v.idNoeudCourant}`, retirer: () => this.form.patchValue({ idNoeudCourant: '' }) });
+    if (v.dateDebutMin)
+      f.push({ label: `Depuis: ${this.formatDate(v.dateDebutMin)}`, retirer: () => this.form.patchValue({ dateDebutMin: null }) });
+    if (v.dateDebutMax)
+      f.push({ label: `Jusqu'à: ${this.formatDate(v.dateDebutMax)}`, retirer: () => this.form.patchValue({ dateDebutMax: null }) });
+    if (v.racinesSeulement)
+      f.push({ label: 'Racines seulement', retirer: () => this.form.patchValue({ racinesSeulement: false }) });
+    this.filtresVariablesArray.controls.forEach((ctrl, i) => {
+      const fv = ctrl.value as FiltreVariable;
+      if (fv.nom?.trim()) {
+        const opLabel = OPERATEUR_LABELS[fv.operateur] ?? fv.operateur;
+        f.push({ label: `${fv.nom} ${opLabel} "${fv.valeur}"`, retirer: () => this.supprimerFiltreVariable(i) });
+      }
+    });
     return f;
   }
 
@@ -115,9 +154,24 @@ export class InstancesListComponent implements OnInit, OnDestroy {
     dateDebutMin:     [null as Date | null],
     dateDebutMax:     [null as Date | null],
     racinesSeulement: [false],
-    nomVariable:      [''],
-    valeurVariable:   [''],
+    filtresVariables: this.fb.array([]),
   });
+
+  get filtresVariablesArray(): FormArray {
+    return this.form.get('filtresVariables') as FormArray;
+  }
+
+  ajouterFiltreVariable(): void {
+    this.filtresVariablesArray.push(
+      this.fb.group({ nom: [''], operateur: ['Contient' as OperateurVariable], valeur: [''] }),
+      { emitEvent: false }
+    );
+  }
+
+  supprimerFiltreVariable(i: number): void {
+    this.filtresVariablesArray.removeAt(i);
+    this.page = 1;
+  }
 
   // ── Cycle de vie ─────────────────────────────────────────────────────────────
 
@@ -155,6 +209,9 @@ export class InstancesListComponent implements OnInit, OnDestroy {
     this.loading = true;
     const v = this.form.value;
 
+    const filtresVariables = (this.filtresVariablesArray.value as FiltreVariable[])
+      .filter(f => f.nom?.trim());
+
     const query: RechercheInstancesQuery = {
       statuts:          v.statuts?.length ? v.statuts : undefined,
       cleDefinition:    v.cleDefinition?.trim() || undefined,
@@ -163,8 +220,7 @@ export class InstancesListComponent implements OnInit, OnDestroy {
       dateDebutMin:     v.dateDebutMin ? (v.dateDebutMin as Date).toISOString() : undefined,
       dateDebutMax:     v.dateDebutMax ? (v.dateDebutMax as Date).toISOString() : undefined,
       racinesSeulement: v.racinesSeulement || undefined,
-      nomVariable:      v.nomVariable?.trim() || undefined,
-      valeurVariable:   v.valeurVariable?.trim() || undefined,
+      filtresVariables: filtresVariables.length ? filtresVariables : undefined,
       page:             this.page,
       taille:           this.taille,
       triColonne:       this.triColonne,
@@ -184,22 +240,16 @@ export class InstancesListComponent implements OnInit, OnDestroy {
   }
 
   reinitialiser(): void {
-    this.form.reset({ statuts: [], racinesSeulement: false });
+    while (this.filtresVariablesArray.length) {
+      this.filtresVariablesArray.removeAt(0, { emitEvent: false });
+    }
+    this.form.reset({ statuts: [], racinesSeulement: false, filtresVariables: [] });
     this.page = 1; this.triColonne = undefined; this.triSens = 'desc';
     this.rechercher();
   }
 
   appliquerFiltreRapide(statut: StatutInstance): void {
     this.form.patchValue({ statuts: [statut] });
-  }
-
-  retirerFiltre(index: number): void {
-    const keys: (keyof typeof this.form.value)[] = [
-      'statuts', 'cleDefinition', 'aggregateId', 'idNoeudCourant',
-      'dateDebutMin', 'dateDebutMax', 'racinesSeulement', 'nomVariable',
-    ];
-    const key = keys[index];
-    if (key) this.form.patchValue({ [key]: key === 'statuts' ? [] : null });
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

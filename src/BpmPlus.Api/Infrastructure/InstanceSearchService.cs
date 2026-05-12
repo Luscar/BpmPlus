@@ -102,19 +102,29 @@ public class InstanceSearchService
         if (q.RacinesSeulement == true)
             clauses.Add("i.ID_INSTANCE_PARENT IS NULL");
 
-        // ── Recherche sur variable ────────────────────────────────────────────
-        if (!string.IsNullOrWhiteSpace(q.NomVariable) && !string.IsNullOrWhiteSpace(q.ValeurVariable))
+        // ── Filtres sur variables (multi-critères avec opérateurs) ───────────────
+        if (q.FiltresVariables is { Count: > 0 })
         {
-            clauses.Add($"""
-                EXISTS (
-                    SELECT 1 FROM {TableVariable} v
-                    WHERE v.ID_INSTANCE = i.ID
-                      AND v.NOM = @NomVariable
-                      AND v.VALEUR LIKE @ValeurVariable
-                )
-                """);
-            p.Add("NomVariable", q.NomVariable.Trim());
-            p.Add("ValeurVariable", $"%{q.ValeurVariable.Trim()}%");
+            for (int idx = 0; idx < q.FiltresVariables.Count; idx++)
+            {
+                var f = q.FiltresVariables[idx];
+                if (string.IsNullOrWhiteSpace(f.Nom)) continue;
+
+                var pNom = $"NomVar{idx}";
+                var pVal = $"ValVar{idx}";
+                var (sqlCondition, valeur) = BuildSqlVariable(f, pVal);
+
+                clauses.Add($"""
+                    EXISTS (
+                        SELECT 1 FROM {TableVariable} v
+                        WHERE v.ID_INSTANCE = i.ID
+                          AND v.NOM = @{pNom}
+                          AND {sqlCondition}
+                    )
+                    """);
+                p.Add(pNom, f.Nom.Trim());
+                p.Add(pVal, valeur);
+            }
         }
 
         var where = clauses.Count > 0
@@ -122,6 +132,24 @@ public class InstanceSearchService
             : string.Empty;
 
         return (where, p);
+    }
+
+    private static (string Sql, string Valeur) BuildSqlVariable(FiltreVariable f, string param)
+    {
+        var val = f.Valeur.Trim();
+        return f.Operateur switch
+        {
+            OperateurVariable.Egal              => ($"v.VALEUR = @{param}",                                 val),
+            OperateurVariable.DifferentDe       => ($"v.VALEUR <> @{param}",                               val),
+            OperateurVariable.Contient          => ($"v.VALEUR LIKE @{param}",                             $"%{val}%"),
+            OperateurVariable.CommencePar       => ($"v.VALEUR LIKE @{param}",                             $"{val}%"),
+            OperateurVariable.TerminePar        => ($"v.VALEUR LIKE @{param}",                             $"%{val}"),
+            OperateurVariable.SuperieurA        => ($"CAST(v.VALEUR AS REAL) > CAST(@{param} AS REAL)",    val),
+            OperateurVariable.SuperieurOuEgal   => ($"CAST(v.VALEUR AS REAL) >= CAST(@{param} AS REAL)",   val),
+            OperateurVariable.InferieurA        => ($"CAST(v.VALEUR AS REAL) < CAST(@{param} AS REAL)",    val),
+            OperateurVariable.InferieurOuEgal   => ($"CAST(v.VALEUR AS REAL) <= CAST(@{param} AS REAL)",   val),
+            _                                   => ($"v.VALEUR LIKE @{param}",                             $"%{val}%"),
+        };
     }
 
     private static string ColonneSort(string? col, string? sens)
@@ -167,8 +195,7 @@ public class RechercheInstancesQuery
     public DateTime?     DateDebutMin  { get; set; }
     public DateTime?     DateDebutMax  { get; set; }
     public bool?         RacinesSeulement { get; set; }
-    public string?       NomVariable   { get; set; }
-    public string?       ValeurVariable { get; set; }
+    public List<FiltreVariable>? FiltresVariables { get; set; }
 
     private int _page = 1;
     private int _taille = 25;
@@ -178,6 +205,26 @@ public class RechercheInstancesQuery
 
     public string? TriColonne { get; set; }
     public string? TriSens    { get; set; }
+}
+
+public enum OperateurVariable
+{
+    Egal,
+    DifferentDe,
+    Contient,
+    CommencePar,
+    TerminePar,
+    SuperieurA,
+    SuperieurOuEgal,
+    InferieurA,
+    InferieurOuEgal,
+}
+
+public class FiltreVariable
+{
+    public string           Nom      { get; set; } = string.Empty;
+    public string           Valeur   { get; set; } = string.Empty;
+    public OperateurVariable Operateur { get; set; } = OperateurVariable.Contient;
 }
 
 public record ResultatRecherche(

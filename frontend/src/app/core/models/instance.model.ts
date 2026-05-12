@@ -48,6 +48,23 @@ export interface InstanceEchue {
 
 // ── Recherche avancée ─────────────────────────────────────────────────────────
 
+export type OperateurVariable =
+  | 'Egal'
+  | 'DifferentDe'
+  | 'Contient'
+  | 'CommencePar'
+  | 'TerminePar'
+  | 'SuperieurA'
+  | 'SuperieurOuEgal'
+  | 'InferieurA'
+  | 'InferieurOuEgal';
+
+export interface FiltreVariable {
+  nom:       string;
+  valeur:    string;
+  operateur: OperateurVariable;
+}
+
 export interface RechercheInstancesQuery {
   statuts?:          StatutInstance[];
   cleDefinition?:    string;
@@ -56,8 +73,7 @@ export interface RechercheInstancesQuery {
   dateDebutMin?:     string;   // ISO date string
   dateDebutMax?:     string;
   racinesSeulement?: boolean;
-  nomVariable?:      string;
-  valeurVariable?:   string;
+  filtresVariables?: FiltreVariable[];
   page:              number;
   taille:            number;
   triColonne?:       string;

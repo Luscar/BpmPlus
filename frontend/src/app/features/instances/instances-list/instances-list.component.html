@@ -95,19 +95,59 @@
           </mat-checkbox>
         </div>
 
-        <mat-divider vertical class="divider" />
+      </div>
 
-        <mat-form-field appearance="outline" class="field-var-nom">
-          <mat-label>Variable</mat-label>
-          <mat-icon matPrefix>data_object</mat-icon>
-          <input matInput formControlName="nomVariable" placeholder="nom" />
-        </mat-form-field>
+      <!-- Ligne 3 : Filtres sur variables (multi-critères) -->
+      <div class="variables-section">
+        <div class="variables-header">
+          <span class="variables-title">
+            <mat-icon>data_object</mat-icon>
+            Filtres sur variables
+          </span>
+          <button mat-button color="primary" type="button" (click)="ajouterFiltreVariable()">
+            <mat-icon>add</mat-icon> Ajouter un filtre
+          </button>
+        </div>
 
-        <mat-form-field appearance="outline" class="field-var-val">
-          <mat-label>Valeur</mat-label>
-          <input matInput formControlName="valeurVariable" placeholder="contient..." />
-        </mat-form-field>
+        <div formArrayName="filtresVariables" class="variables-list">
+          @for (ctrl of filtresVariablesArray.controls; track $index; let i = $index) {
+            <div [formGroupName]="i" class="variable-row">
 
+              <mat-form-field appearance="outline" class="field-var-nom">
+                <mat-label>Variable</mat-label>
+                <mat-icon matPrefix>data_object</mat-icon>
+                <input matInput formControlName="nom" placeholder="nom de la variable" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="field-var-op">
+                <mat-label>Opérateur</mat-label>
+                <mat-select formControlName="operateur">
+                  @for (op of operateurs; track op.valeur) {
+                    <mat-option [value]="op.valeur">{{ op.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="field-var-val">
+                <mat-label>Valeur</mat-label>
+                <input matInput formControlName="valeur" placeholder="valeur" />
+              </mat-form-field>
+
+              <button mat-icon-button color="warn" type="button"
+                (click)="supprimerFiltreVariable(i)"
+                matTooltip="Supprimer ce filtre">
+                <mat-icon>remove_circle_outline</mat-icon>
+              </button>
+
+            </div>
+          }
+
+          @if (filtresVariablesArray.length === 0) {
+            <p class="no-variable-hint">
+              Aucun filtre variable actif.
+            </p>
+          }
+        </div>
       </div>
 
     </form>
@@ -116,9 +156,9 @@
   <!-- ── Chips des filtres actifs ───────────────────────────────────────── -->
   @if (filtresActifs.length > 0) {
     <div class="active-chips">
-      @for (f of filtresActifs; track $index; let i = $index) {
-        <mat-chip-row (removed)="retirerFiltre(i)">
-          {{ f }}
+      @for (f of filtresActifs; track $index) {
+        <mat-chip-row (removed)="f.retirer()">
+          {{ f.label }}
           <button matChipRemove aria-label="Retirer ce filtre">
             <mat-icon>cancel</mat-icon>
           </button>
