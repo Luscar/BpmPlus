@@ -1,6 +1,7 @@
 using BpmPlus.Abstractions;
 using BpmPlus.Core.Definition;
 using FluentAssertions;
+using Xunit;
 
 namespace BpmPlus.UnitTests.Definition;
 

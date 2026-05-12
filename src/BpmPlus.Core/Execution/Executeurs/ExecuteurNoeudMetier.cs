@@ -36,7 +36,7 @@ public class ExecuteurNoeudMetier
 
         await handler.ExecuterAsync(contexte.IdInstance, contexte.AggregateId, parametres, contexte);
 
-        if (noeud.EstFinale)
+        if (noeud.EstFinale || noeud.FluxSortants.Count == 0)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
 
         var suivant = noeud.FluxSortants.FirstOrDefault()?.Vers;

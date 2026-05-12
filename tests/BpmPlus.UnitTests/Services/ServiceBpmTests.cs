@@ -6,6 +6,7 @@ using BpmPlus.Core.Persistance;
 using BpmPlus.Core.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 using Moq;
 
 namespace BpmPlus.UnitTests.Services;

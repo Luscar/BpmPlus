@@ -98,7 +98,7 @@ public class ExecuteurNoeudSousProcessus
 
         _logger.LogInformation("NoeudSousProcessus '{Id}' — sous-processus terminé", noeud.Id);
 
-        if (noeud.EstFinale)
+        if (noeud.EstFinale || noeud.FluxSortants.Count == 0)
             return new ResultatNoeud(TypeResultatNoeud.Termine, null);
 
         var suivant = noeud.FluxSortants.FirstOrDefault()?.Vers;

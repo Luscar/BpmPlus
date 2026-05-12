@@ -5,6 +5,7 @@ using BpmPlus.Core.Execution.Executeurs;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Xunit;
 
 namespace BpmPlus.UnitTests.Execution;
 
