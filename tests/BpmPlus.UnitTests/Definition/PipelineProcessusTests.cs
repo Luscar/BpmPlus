@@ -13,6 +13,9 @@ file class NotifierRefusCommand;
 file class PrepareApprobationCommand;
 file class EstCommandeApprouveeQuery;
 file class CalculerEcheanceQuery;
+file class FinaliserCommand;
+file class NotifierEchecCommand;
+file class PreparerCommand;
 
 public class PipelineProcessusTests
 {
@@ -472,5 +475,120 @@ public class PipelineProcessusTests
 
         // Le nœud de début est bien le premier ajouté
         def.NoeudDebutId.Should().Be("valider-commande");
+    }
+
+    // ── Boucles (Ancrer / Revenir) ────────────────────────────────────────────
+
+    [Fact]
+    public void Revenir_DepuisBrancheAvecNoeud_ConnecteVersAncre()
+    {
+        // Processus de révision : si rejeté, on refait la tâche depuis le début.
+        //
+        //  [Ancrer "debut"] Valider → Tache Approuver → Decision
+        //                                                  ├── oui : Finaliser → Fin
+        //                                                  └── non : NotifierEchec → (→ Valider)
+        var def = PipelineProcessus.Creer("avec-boucle")
+            .Ancrer("debut")
+            .Faire<ValiderCommandeCommand>()
+            .Tache("Approuver", t => t.Post<EnregistrerDecisionCommand>())
+            .SiQuery<EstCommandeApprouveeQuery>(
+                oui: p => p.Faire<FinaliserCommand>().Fin(),
+                non: p => p.Faire<NotifierEchecCommand>().Revenir("debut"))
+            .Compiler();
+
+        // Le nœud ancré est bien "valider-commande"
+        var valider = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "ValiderCommandeCommand");
+
+        // NotifierEchec doit pointer vers Valider
+        var notifier = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "NotifierEchecCommand");
+
+        notifier.EstFinale.Should().BeFalse();
+        notifier.FluxSortants.Should().ContainSingle(f => f.Vers == valider.Id);
+    }
+
+    [Fact]
+    public void Revenir_BrancheVide_DecisionPointeDirectementVersAncre()
+    {
+        // La branche "non" n'a aucun nœud propre, elle boucle directement
+        // depuis la décision vers l'ancre.
+        var def = PipelineProcessus.Creer("boucle-directe")
+            .Ancrer("debut")
+            .Faire<ValiderCommandeCommand>()
+            .SiQuery<EstCommandeApprouveeQuery>(
+                oui: p => p.Faire<FinaliserCommand>().Fin(),
+                non: p => p.Revenir("debut"))  // branche vide — retour direct
+            .Compiler();
+
+        var valider  = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "ValiderCommandeCommand");
+        var decision = def.Noeuds.OfType<NoeudDecision>().First();
+
+        var fluxDefaut = decision.FluxSortants.First(f => f.EstParDefaut);
+        fluxDefaut.Vers.Should().Be(valider.Id);
+    }
+
+    [Fact]
+    public void Revenir_AncreIndefinie_LanceException()
+    {
+        var act = () => PipelineProcessus.Creer("p")
+            .Faire<ValiderCommandeCommand>()
+            .SiQuery<EstCommandeApprouveeQuery>(
+                oui: p => p.Fin(),
+                non: p => p.Revenir("ancre-inexistante"))
+            .Compiler();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*ancre-inexistante*");
+    }
+
+    [Fact]
+    public void Ancrer_SurDecision_BoucleVersDecision()
+    {
+        // L'ancre peut aussi pointer sur un nœud de décision lui-même.
+        var def = PipelineProcessus.Creer("boucle-sur-decision")
+            .Faire<PreparerCommand>()
+            .Ancrer("point-decision")
+            .SiQuery<EstCommandeApprouveeQuery>(
+                oui: p => p.Faire<FinaliserCommand>().Fin(),
+                non: p => p.Faire<NotifierEchecCommand>().Revenir("point-decision"))
+            .Compiler();
+
+        var decision = def.Noeuds.OfType<NoeudDecision>().First();
+        var notifier = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "NotifierEchecCommand");
+
+        notifier.FluxSortants.Should().ContainSingle(f => f.Vers == decision.Id);
+    }
+
+    [Fact]
+    public void Ancrer_BoucleDepuisSousBranche_AncreParentVisible()
+    {
+        // Une branche imbriquée peut revenir vers une ancre définie au niveau parent.
+        //
+        //  [Ancrer "debut"] Valider
+        //    └── Decision1 (type)
+        //          ├── oui : A → Decision2 (sous-type)
+        //          │              ├── oui : B → Fin
+        //          │              └── non : C → Revenir("debut")  ← ancre parent
+        //          └── non : D → Fin
+        var def = PipelineProcessus.Creer("boucle-imbriquee")
+            .Ancrer("debut")
+            .Faire<ValiderCommandeCommand>()
+            .SiEgal("type", "A",
+                oui: p => p
+                    .Faire<PreparerCommand>()
+                    .SiEgal("sous-type", "A1",
+                        oui: s => s.Faire<FinaliserCommand>().Fin(),
+                        non: s => s.Faire<NotifierEchecCommand>().Revenir("debut")),
+                non: p => p.Faire<EnregistrerDecisionCommand>().Fin())
+            .Compiler();
+
+        var valider  = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "ValiderCommandeCommand");
+        var notifier = def.Noeuds.OfType<NoeudMetier>()
+            .First(n => n.NomCommande == "NotifierEchecCommand");
+
+        notifier.FluxSortants.Should().ContainSingle(f => f.Vers == valider.Id);
     }
 }

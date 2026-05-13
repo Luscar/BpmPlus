@@ -10,7 +10,10 @@ namespace BpmPlus.Core.Definition;
 // en bas. Les connexions entre nœuds sont gérées automatiquement ; inutile de
 // déclarer des identifiants ou d'appeler .Vers(). Les IDs sont déduits du nom
 // de la commande (kebab-case). Les branches de décision sont des sous-séquences
-// inline qui partagent le compteur d'IDs du pipeline parent.
+// inline qui partagent le compteur d'IDs et le dictionnaire d'ancres du parent.
+//
+// Boucles : .Ancrer("nom") marque l'étape suivante comme point de retour.
+//           .Revenir("nom") connecte la position courante vers ce point.
 //
 // Exemple rapide :
 //
@@ -20,6 +23,17 @@ namespace BpmPlus.Core.Definition;
 //       .SiQuery<EstCommandeApprouveeQuery>(
 //           oui: p => p.Faire<NotifierApprobationCommand>().Fin(),
 //           non: p => p.Faire<NotifierRefusCommand>().Fin())
+//       .Compiler();
+//
+// Exemple avec boucle :
+//
+//   var def = PipelineProcessus.Creer("avec-boucle")
+//       .Ancrer("debut-traitement")
+//       .Faire<PreparerCommand>()
+//       .Tache("Traiter", t => t.Post<EnregistrerResultatCommand>())
+//       .SiQuery<EstTraitementValideQuery>(
+//           oui: p => p.Faire<FinaliserCommand>().Fin(),
+//           non: p => p.Faire<NotifierEchecCommand>().Revenir("debut-traitement"))
 //       .Compiler();
 
 /// <summary>
@@ -33,26 +47,31 @@ public sealed class PipelineProcessus
     private readonly string _cle;
     private readonly string _nom;
     private readonly List<NoeudProcessus> _noeuds = [];
-    private readonly List<string> _tetes = [];          // nœuds dont la sortie est encore libre
+    private readonly List<string> _tetes = [];           // nœuds dont la sortie est encore libre
     private string? _idPremierNoeud;
-    private readonly Dictionary<string, int> _compteurIds; // partagé entre parent et branches
+    private readonly Dictionary<string, int>    _compteurIds; // partagé : IDs globalement uniques
+    private readonly Dictionary<string, string> _ancres;      // partagé : étiquette → ID du nœud cible
+    private string? _prochainAncre;   // ancre en attente, appliquée au prochain nœud ajouté
+    private string? _cibleRetour;     // renseigné par Revenir() sur une branche sans nœuds propres
 
     // ── Constructeurs (privés) ────────────────────────────────────────────────
 
     private PipelineProcessus(string cle, string nom)
     {
-        _cle = cle;
-        _nom = nom;
-        _compteurIds = [];
+        _cle          = cle;
+        _nom          = nom;
+        _compteurIds  = [];
+        _ancres       = [];
     }
 
-    // Constructeur pour les branches : partage le compteur d'IDs avec le parent
-    // afin que les IDs restent globalement uniques.
-    private PipelineProcessus(Dictionary<string, int> compteurIds)
+    // Constructeur pour les branches : partage le compteur d'IDs ET le dictionnaire
+    // d'ancres avec le parent, pour que les boucles inter-niveaux fonctionnent.
+    private PipelineProcessus(Dictionary<string, int> compteurIds, Dictionary<string, string> ancres)
     {
         _cle          = string.Empty;
         _nom          = string.Empty;
         _compteurIds  = compteurIds;
+        _ancres       = ancres;
     }
 
     // ── Point d'entrée ────────────────────────────────────────────────────────
@@ -266,6 +285,49 @@ public sealed class PipelineProcessus
         return this;
     }
 
+    // ── Boucles ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Pose une étiquette sur le prochain nœud ajouté (Faire, Tache, Décision…).
+    /// Ce nœud devient la cible possible d'un appel ultérieur à
+    /// <see cref="Revenir"/>, créant ainsi une boucle dans le processus.
+    /// </summary>
+    public PipelineProcessus Ancrer(string etiquette)
+    {
+        _prochainAncre = etiquette;
+        return this;
+    }
+
+    /// <summary>
+    /// Connecte la position courante vers le nœud identifié par
+    /// <paramref name="etiquette"/> (défini précédemment via <see cref="Ancrer"/>).
+    /// Peut être appelé directement dans une branche de décision, avec ou sans
+    /// nœud préalable dans cette branche.
+    /// </summary>
+    public PipelineProcessus Revenir(string etiquette)
+    {
+        if (!_ancres.TryGetValue(etiquette, out var idCible))
+            throw new InvalidOperationException(
+                $"Ancre '{etiquette}' introuvable. " +
+                $"Vérifiez qu'un appel à .Ancrer(\"{etiquette}\") précède bien l'étape cible.");
+
+        if (_tetes.Count > 0)
+        {
+            // Cas normal : des nœuds existent dans cette branche → on les relie à la cible.
+            foreach (var idTete in _tetes)
+                _noeuds.First(n => n.Id == idTete).FluxSortants.Add(new FluxSortant { Vers = idCible });
+            _tetes.Clear();
+        }
+        else if (_idPremierNoeud is null)
+        {
+            // Branche vide : le retour se fait directement depuis le nœud de décision parent.
+            // On signale la cible au niveau supérieur via _cibleRetour.
+            _cibleRetour = idCible;
+        }
+
+        return this;
+    }
+
     // ── Finalisation et compilation ───────────────────────────────────────────
 
     /// <summary>
@@ -326,6 +388,13 @@ public sealed class PipelineProcessus
         _idPremierNoeud ??= noeud.Id;
         _noeuds.Add(noeud);
         _tetes.Add(noeud.Id);
+
+        // Enregistre l'ancre en attente (posée par .Ancrer()) sur ce nœud.
+        if (_prochainAncre is not null)
+        {
+            _ancres[_prochainAncre] = noeud.Id;
+            _prochainAncre = null;
+        }
     }
 
     private PipelineProcessus AjouterDecision(
@@ -347,8 +416,15 @@ public sealed class PipelineProcessus
         _idPremierNoeud ??= id;
         _noeuds.Add(decision);
 
-        // Branche "oui" (condition respectée)
-        var brancheOui = new PipelineProcessus(_compteurIds);
+        // Enregistre l'ancre en attente sur le nœud de décision lui-même.
+        if (_prochainAncre is not null)
+        {
+            _ancres[_prochainAncre] = id;
+            _prochainAncre = null;
+        }
+
+        // Branche "oui" — partage compteur ET ancres pour permettre les boucles inter-niveaux.
+        var brancheOui = new PipelineProcessus(_compteurIds, _ancres);
         oui(brancheOui);
         if (brancheOui._idPremierNoeud is not null)
         {
@@ -356,17 +432,26 @@ public sealed class PipelineProcessus
             _noeuds.AddRange(brancheOui._noeuds);
             _tetes.AddRange(brancheOui._tetes);
         }
+        else if (brancheOui._cibleRetour is not null)
+        {
+            // Branche vide avec Revenir() : la décision pointe directement sur la cible.
+            decision.FluxSortants.Add(new FluxSortant { Condition = conditionOui, Vers = brancheOui._cibleRetour });
+        }
 
-        // Branche "non" (défaut)
+        // Branche "non" (défaut) — même mécanique.
         if (non is not null)
         {
-            var brancheNon = new PipelineProcessus(_compteurIds);
+            var brancheNon = new PipelineProcessus(_compteurIds, _ancres);
             non(brancheNon);
             if (brancheNon._idPremierNoeud is not null)
             {
                 decision.FluxSortants.Add(new FluxSortant { EstParDefaut = true, Vers = brancheNon._idPremierNoeud });
                 _noeuds.AddRange(brancheNon._noeuds);
                 _tetes.AddRange(brancheNon._tetes);
+            }
+            else if (brancheNon._cibleRetour is not null)
+            {
+                decision.FluxSortants.Add(new FluxSortant { EstParDefaut = true, Vers = brancheNon._cibleRetour });
             }
         }
 
