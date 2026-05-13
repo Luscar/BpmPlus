@@ -14,8 +14,8 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     public async Task AjouterAsync(long idInstance, string nomSignal, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            INSERT INTO {T("ATTENTE_SIGNAL")} (ID, ID_INSTANCE, NOM_SIGNAL, DATE_CREATION)
-            VALUES ({T("SEQ_SIGNAL")}.NEXTVAL, :IdInstance, :NomSignal, :DateCreation)
+            INSERT INTO {T("ATTEN_SIGNL")} (NO_SEQ_ATTEN_SIGNL, NO_SEQ_INSTC_PROCS, NOM_SIGNL, DH_CREA)
+            VALUES ({T("SEQ_SIGNL")}.NEXTVAL, :IdInstance, :NomSignal, :DateCreation)
             """),
             new { IdInstance = idInstance, NomSignal = nomSignal, DateCreation = DateTime.UtcNow },
             Tx);
@@ -24,7 +24,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     public async Task SupprimerParInstanceAsync(long idInstance, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            DELETE FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
+            DELETE FROM {T("ATTEN_SIGNL")} WHERE NO_SEQ_INSTC_PROCS = :IdInstance
             """), new { IdInstance = idInstance });
     }
 
@@ -32,7 +32,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
         string nomSignal, CancellationToken ct = default)
     {
         var ids = await Cn.QueryAsync<long>(OraParam($"""
-            SELECT ID_INSTANCE FROM {T("ATTENTE_SIGNAL")} WHERE NOM_SIGNAL = :NomSignal
+            SELECT NO_SEQ_INSTC_PROCS FROM {T("ATTEN_SIGNL")} WHERE NOM_SIGNL = :NomSignal
             """), new { NomSignal = nomSignal });
         return ids.ToList();
     }
@@ -41,7 +41,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
         long idInstance, CancellationToken ct = default)
     {
         var signaux = await Cn.QueryAsync<string>(OraParam($"""
-            SELECT NOM_SIGNAL FROM {T("ATTENTE_SIGNAL")} WHERE ID_INSTANCE = :IdInstance
+            SELECT NOM_SIGNL FROM {T("ATTEN_SIGNL")} WHERE NO_SEQ_INSTC_PROCS = :IdInstance
             """), new { IdInstance = idInstance });
         return signaux.ToList();
     }

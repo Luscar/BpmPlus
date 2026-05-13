@@ -16,15 +16,15 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     {
         var maintenant = DateTime.UtcNow;
         var id = await Cn.QuerySingleAsync<long>(OraParam($"""
-            INSERT INTO {T("INSTANCE_PROCESSUS")}
-                (ID, CLE_DEFINITION, VERSION_DEFINITION, AGGREGATE_ID, STATUT,
-                 ID_NOEUD_COURANT, ID_INSTANCE_PARENT, DATE_DEBUT, DATE_FIN,
-                 DATE_CREATION, DATE_MAJ)
+            INSERT INTO {T("INSTC_PROCS")}
+                (NO_SEQ_INSTC_PROCS, CLE_DEFIN, VERSI_DEFIN, AGGRE_ID, STAT,
+                 ID_NOEUD_COUR, ID_INSTC_PARN, DH_DEB, DH_FIN,
+                 DH_CREA, DH_MODIF)
             VALUES
-                ({T("SEQ_INSTANCE")}.NEXTVAL, :CleDefinition, :VersionDefinition, :AggregateId, :Statut,
+                ({T("SEQ_INSTC")}.NEXTVAL, :CleDefinition, :VersionDefinition, :AggregateId, :Statut,
                  :IdNoeudCourant, :IdInstanceParent, :DateDebut, :DateFin,
                  :DateCreation, :DateMaj)
-            RETURNING ID INTO :NewId
+            RETURNING NO_SEQ_INSTC_PROCS INTO :NewId
             """),
             new
             {
@@ -46,7 +46,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     public async Task<InstanceProcessus?> ObtenirParIdAsync(long id, CancellationToken ct = default)
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
-            SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID = :Id
+            SELECT * FROM {T("INSTC_PROCS")} WHERE NO_SEQ_INSTC_PROCS = :Id
             """), new { Id = id });
         return row is null ? null : MapperInstance(row);
     }
@@ -55,10 +55,10 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
-            SELECT * FROM {T("INSTANCE_PROCESSUS")}
-            WHERE CLE_DEFINITION = :Cle
-              AND AGGREGATE_ID = :AggId
-              AND STATUT != 'Terminee'
+            SELECT * FROM {T("INSTC_PROCS")}
+            WHERE CLE_DEFIN = :Cle
+              AND AGGRE_ID = :AggId
+              AND STAT != 'Terminee'
             FETCH FIRST 1 ROW ONLY
             """), new { Cle = cleDefinition, AggId = aggregateId });
         return row is null ? null : MapperInstance(row);
@@ -68,7 +68,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         long idParent, CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync(OraParam($"""
-            SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE ID_INSTANCE_PARENT = :IdParent
+            SELECT * FROM {T("INSTC_PROCS")} WHERE ID_INSTC_PARN = :IdParent
             """), new { IdParent = idParent });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
@@ -77,9 +77,9 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         string nomVariable, string valeurSerialisee, CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync(OraParam($"""
-            SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
-            JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
-            WHERE v.NOM = :Nom AND v.VALEUR = :Valeur
+            SELECT i.* FROM {T("INSTC_PROCS")} i
+            JOIN {T("VAR_PROCS")} v ON v.NO_SEQ_INSTC_PROCS = i.NO_SEQ_INSTC_PROCS
+            WHERE v.NOM_VAR = :Nom AND v.VAL_VAR = :Valeur
             """), new { Nom = nomVariable, Valeur = valeurSerialisee });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
@@ -88,9 +88,9 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         string nomVariable, string valeurSerialisee, StatutInstance statut, CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync(OraParam($"""
-            SELECT i.* FROM {T("INSTANCE_PROCESSUS")} i
-            JOIN {T("VARIABLE_PROCESSUS")} v ON v.ID_INSTANCE = i.ID
-            WHERE v.NOM = :Nom AND v.VALEUR = :Valeur AND i.STATUT = :Statut
+            SELECT i.* FROM {T("INSTC_PROCS")} i
+            JOIN {T("VAR_PROCS")} v ON v.NO_SEQ_INSTC_PROCS = i.NO_SEQ_INSTC_PROCS
+            WHERE v.NOM_VAR = :Nom AND v.VAL_VAR = :Valeur AND i.STAT = :Statut
             """), new { Nom = nomVariable, Valeur = valeurSerialisee, Statut = statut.ToString() });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
@@ -98,7 +98,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     public async Task<IReadOnlyList<InstanceProcessus>> RechercherParVariablesAsync(
         IReadOnlyList<FiltreVariableSerialisee> filtres, StatutInstance? statut = null, CancellationToken ct = default)
     {
-        var sql = new StringBuilder($"SELECT * FROM {T("INSTANCE_PROCESSUS")} i WHERE");
+        var sql = new StringBuilder($"SELECT * FROM {T("INSTC_PROCS")} i WHERE");
         var dp = new DynamicParameters();
 
         for (int i = 0; i < filtres.Count; i++)
@@ -109,15 +109,15 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
             var valeur = f.Operateur == Operateur.Contient ? $"%{f.ValeurSerialisee}%" : f.ValeurSerialisee;
 
             if (i > 0) sql.Append(" AND");
-            sql.Append($" EXISTS (SELECT 1 FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = i.ID AND NOM = @{nomParam} AND VALEUR {OperateurVersSql(f.Operateur)} @{valParam})");
+            sql.Append($" EXISTS (SELECT 1 FROM {T("VAR_PROCS")} WHERE NO_SEQ_INSTC_PROCS = i.NO_SEQ_INSTC_PROCS AND NOM_VAR = @{nomParam} AND VAL_VAR {OperateurVersSql(f.Operateur)} @{valParam})");
             dp.Add(nomParam, f.NomVariable);
             dp.Add(valParam, valeur);
         }
 
         if (statut.HasValue)
         {
-            if (filtres.Count == 0) sql.Append(" i.STATUT = @Statut");
-            else sql.Append(" AND i.STATUT = @Statut");
+            if (filtres.Count == 0) sql.Append(" i.STAT = @Statut");
+            else sql.Append(" AND i.STAT = @Statut");
             dp.Add("Statut", statut.Value.ToString());
         }
         else if (filtres.Count == 0)
@@ -144,7 +144,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         StatutInstance statut, CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync(OraParam($"""
-            SELECT * FROM {T("INSTANCE_PROCESSUS")} WHERE STATUT = :Statut
+            SELECT * FROM {T("INSTC_PROCS")} WHERE STAT = :Statut
             """), new { Statut = statut.ToString() });
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
@@ -152,8 +152,8 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     public async Task<IReadOnlyList<InstanceProcessus>> ObtenirSuspenduesAsync(CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync($"""
-            SELECT * FROM {T("INSTANCE_PROCESSUS")}
-            WHERE STATUT IN ('Active', 'Suspendue')
+            SELECT * FROM {T("INSTC_PROCS")}
+            WHERE STAT IN ('Active', 'Suspendue')
             """);
         return rows.Select(r => (InstanceProcessus)MapperInstance(r)).ToList();
     }
@@ -163,12 +163,12 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            UPDATE {T("INSTANCE_PROCESSUS")}
-            SET STATUT = :Statut,
-                ID_NOEUD_COURANT = :NoeudCourant,
-                DATE_FIN = :DateFin,
-                DATE_MAJ = :DateMaj
-            WHERE ID = :Id
+            UPDATE {T("INSTC_PROCS")}
+            SET STAT = :Statut,
+                ID_NOEUD_COUR = :NoeudCourant,
+                DH_FIN = :DateFin,
+                DH_MODIF = :DateMaj
+            WHERE NO_SEQ_INSTC_PROCS = :Id
             """),
             new
             {
@@ -184,11 +184,11 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         long id, int nouvelleVersion, string? idNoeudCourant, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            UPDATE {T("INSTANCE_PROCESSUS")}
-            SET VERSION_DEFINITION = :Version,
-                ID_NOEUD_COURANT = :NoeudCourant,
-                DATE_MAJ = :DateMaj
-            WHERE ID = :Id
+            UPDATE {T("INSTC_PROCS")}
+            SET VERSI_DEFIN = :Version,
+                ID_NOEUD_COUR = :NoeudCourant,
+                DH_MODIF = :DateMaj
+            WHERE NO_SEQ_INSTC_PROCS = :Id
             """),
             new { Id = id, Version = nouvelleVersion, NoeudCourant = idNoeudCourant, DateMaj = DateTime.UtcNow },
             Tx);
@@ -198,27 +198,27 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
         var count = await Cn.QuerySingleAsync<int>(OraParam($"""
-            SELECT COUNT(*) FROM {T("INSTANCE_PROCESSUS")}
-            WHERE CLE_DEFINITION = :Cle
-              AND AGGREGATE_ID = :AggId
-              AND STATUT != 'Terminee'
+            SELECT COUNT(*) FROM {T("INSTC_PROCS")}
+            WHERE CLE_DEFIN = :Cle
+              AND AGGRE_ID = :AggId
+              AND STAT != 'Terminee'
             """), new { Cle = cleDefinition, AggId = aggregateId });
         return count > 0;
     }
 
     private static InstanceProcessus MapperInstance(dynamic row) => new()
     {
-        Id = Convert.ToInt64(row.ID),
-        CleDefinition = (string)row.CLE_DEFINITION,
-        VersionDefinition = Convert.ToInt32(row.VERSION_DEFINITION),
-        AggregateId = Convert.ToInt64(row.AGGREGATE_ID),
-        Statut = Enum.Parse<StatutInstance>((string)row.STATUT),
-        IdNoeudCourant = row.ID_NOEUD_COURANT,
-        IdInstanceParent = row.ID_INSTANCE_PARENT is not null
-            ? Convert.ToInt64(row.ID_INSTANCE_PARENT) : null,
-        DateDebut = Convert.ToDateTime(row.DATE_DEBUT),
-        DateFin = row.DATE_FIN is not null ? Convert.ToDateTime(row.DATE_FIN) : null,
-        DateCreation = Convert.ToDateTime(row.DATE_CREATION),
-        DateMaj = Convert.ToDateTime(row.DATE_MAJ)
+        Id = Convert.ToInt64(row.NO_SEQ_INSTC_PROCS),
+        CleDefinition = (string)row.CLE_DEFIN,
+        VersionDefinition = Convert.ToInt32(row.VERSI_DEFIN),
+        AggregateId = Convert.ToInt64(row.AGGRE_ID),
+        Statut = Enum.Parse<StatutInstance>((string)row.STAT),
+        IdNoeudCourant = row.ID_NOEUD_COUR,
+        IdInstanceParent = row.ID_INSTC_PARN is not null
+            ? Convert.ToInt64(row.ID_INSTC_PARN) : null,
+        DateDebut = Convert.ToDateTime(row.DH_DEB),
+        DateFin = row.DH_FIN is not null ? Convert.ToDateTime(row.DH_FIN) : null,
+        DateCreation = Convert.ToDateTime(row.DH_CREA),
+        DateMaj = Convert.ToDateTime(row.DH_MODIF)
     };
 }

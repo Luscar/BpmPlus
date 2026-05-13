@@ -15,15 +15,15 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
         long idInstance, IReadOnlyDictionary<string, object?> variables, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
+            DELETE FROM {T("VAR_PROCS")} WHERE NO_SEQ_INSTC_PROCS = :IdInstance
             """), new { IdInstance = idInstance });
 
         foreach (var (nom, valeur) in variables)
         {
             var (type, valeurStr) = SerialiserValeur(valeur);
             await Cn.ExecuteAsync(OraParam($"""
-                INSERT INTO {T("VARIABLE_PROCESSUS")} (ID, ID_INSTANCE, NOM, TYPE, VALEUR)
-                VALUES ({T("SEQ_VARIABLE")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
+                INSERT INTO {T("VAR_PROCS")} (NO_SEQ_VAR_PROCS, NO_SEQ_INSTC_PROCS, NOM_VAR, TYP_VAR, VAL_VAR)
+                VALUES ({T("SEQ_VAR_PROCS")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
                 """),
                 new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
                 Tx);
@@ -34,12 +34,12 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
         long idInstance, CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync(OraParam($"""
-            SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = :IdInstance
+            SELECT NOM_VAR, TYP_VAR, VAL_VAR FROM {T("VAR_PROCS")} WHERE NO_SEQ_INSTC_PROCS = :IdInstance
             """), new { IdInstance = idInstance });
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
-            variables[(string)row.NOM] = DeserialiserValeur((string)row.TYPE, (string)row.VALEUR);
+            variables[(string)row.NOM_VAR] = DeserialiserValeur((string)row.TYP_VAR, (string)row.VAL_VAR);
 
         return variables;
     }
@@ -50,14 +50,14 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
         var (type, valeurStr) = SerialiserValeur(valeur);
 
         await Cn.ExecuteAsync(OraParam($"""
-            MERGE INTO {T("VARIABLE_PROCESSUS")} tgt
-            USING (SELECT :IdInstance AS ID_INSTANCE, :Nom AS NOM FROM DUAL) src
-            ON (tgt.ID_INSTANCE = src.ID_INSTANCE AND tgt.NOM = src.NOM)
+            MERGE INTO {T("VAR_PROCS")} tgt
+            USING (SELECT :IdInstance AS NO_SEQ_INSTC_PROCS, :Nom AS NOM_VAR FROM DUAL) src
+            ON (tgt.NO_SEQ_INSTC_PROCS = src.NO_SEQ_INSTC_PROCS AND tgt.NOM_VAR = src.NOM_VAR)
             WHEN MATCHED THEN
-                UPDATE SET tgt.TYPE = :Type, tgt.VALEUR = :Valeur
+                UPDATE SET tgt.TYP_VAR = :Type, tgt.VAL_VAR = :Valeur
             WHEN NOT MATCHED THEN
-                INSERT (ID, ID_INSTANCE, NOM, TYPE, VALEUR)
-                VALUES ({T("SEQ_VARIABLE")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
+                INSERT (NO_SEQ_VAR_PROCS, NO_SEQ_INSTC_PROCS, NOM_VAR, TYP_VAR, VAL_VAR)
+                VALUES ({T("SEQ_VAR_PROCS")}.NEXTVAL, :IdInstance, :Nom, :Type, :Valeur)
             """),
             new { IdInstance = idInstance, Nom = nom, Type = type, Valeur = valeurStr },
             Tx);

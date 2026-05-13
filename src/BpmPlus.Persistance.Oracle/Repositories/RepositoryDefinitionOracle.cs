@@ -24,11 +24,11 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
         if (definition.Id.HasValue)
         {
             await Cn.ExecuteAsync(OraParam($"""
-                UPDATE {T("DEFINITION_PROCESSUS")}
-                SET NOM = :Nom,
-                    DEFINITION_JSON = :Json,
-                    DATE_CREATION = :DateCreation
-                WHERE ID = :Id
+                UPDATE {T("DEFIN_PROCS")}
+                SET NOM_DEFIN = :Nom,
+                    DEFIN_JSON = :Json,
+                    DH_CREA = :DateCreation
+                WHERE NO_SEQ_DEFIN_PROCS = :Id
                 """),
                 new { definition.Nom, Json = json, DateCreation = maintenant, definition.Id },
                 Tx);
@@ -36,15 +36,15 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
         }
 
         var derniereVersion = await Cn.QuerySingleOrDefaultAsync<int?>(OraParam($"""
-            SELECT MAX(VERSION) FROM {T("DEFINITION_PROCESSUS")} WHERE CLE = :Cle
+            SELECT MAX(VERSI) FROM {T("DEFIN_PROCS")} WHERE CLE = :Cle
             """), new { definition.Cle }) ?? 0;
 
         var nouvelleVersion = derniereVersion + 1;
 
         var id = await Cn.QuerySingleAsync<long>(OraParam($"""
-            INSERT INTO {T("DEFINITION_PROCESSUS")} (ID, CLE, VERSION, NOM, STATUT, DEFINITION_JSON, DATE_CREATION)
-            VALUES ({T("SEQ_DEFINITION")}.NEXTVAL, :Cle, :Version, :Nom, 'Brouillon', :Json, :DateCreation)
-            RETURNING ID INTO :NewId
+            INSERT INTO {T("DEFIN_PROCS")} (NO_SEQ_DEFIN_PROCS, CLE, VERSI, NOM_DEFIN, STAT, DEFIN_JSON, DH_CREA)
+            VALUES ({T("SEQ_DEFIN")}.NEXTVAL, :Cle, :Version, :Nom, 'Brouillon', :Json, :DateCreation)
+            RETURNING NO_SEQ_DEFIN_PROCS INTO :NewId
             """),
             new { definition.Cle, Version = nouvelleVersion, definition.Nom, Json = json, DateCreation = maintenant },
             Tx);
@@ -55,9 +55,9 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
     public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(string cle, CancellationToken ct = default)
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
-            SELECT * FROM {T("DEFINITION_PROCESSUS")}
-            WHERE CLE = :Cle AND STATUT = 'Brouillon'
-            ORDER BY VERSION DESC
+            SELECT * FROM {T("DEFIN_PROCS")}
+            WHERE CLE = :Cle AND STAT = 'Brouillon'
+            ORDER BY VERSI DESC
             FETCH FIRST 1 ROW ONLY
             """), new { Cle = cle });
 
@@ -68,8 +68,8 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
         string cle, int version, CancellationToken ct = default)
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
-            SELECT * FROM {T("DEFINITION_PROCESSUS")}
-            WHERE CLE = :Cle AND VERSION = :Version AND STATUT = 'Publiee'
+            SELECT * FROM {T("DEFIN_PROCS")}
+            WHERE CLE = :Cle AND VERSI = :Version AND STAT = 'Publiee'
             """), new { Cle = cle, Version = version });
 
         return row is null ? null : MapperDefinition(row);
@@ -79,9 +79,9 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
         string cle, CancellationToken ct = default)
     {
         var row = await Cn.QuerySingleOrDefaultAsync(OraParam($"""
-            SELECT * FROM {T("DEFINITION_PROCESSUS")}
-            WHERE CLE = :Cle AND STATUT = 'Publiee'
-            ORDER BY VERSION DESC
+            SELECT * FROM {T("DEFIN_PROCS")}
+            WHERE CLE = :Cle AND STAT = 'Publiee'
+            ORDER BY VERSI DESC
             FETCH FIRST 1 ROW ONLY
             """), new { Cle = cle });
 
@@ -91,16 +91,16 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
     public async Task PublierAsync(string cle, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
-            UPDATE {T("DEFINITION_PROCESSUS")}
-            SET STATUT = 'Publiee', DATE_PUBLICATION = :DatePublication
-            WHERE CLE = :Cle AND STATUT = 'Brouillon'
+            UPDATE {T("DEFIN_PROCS")}
+            SET STAT = 'Publiee', DH_PUBL = :DatePublication
+            WHERE CLE = :Cle AND STAT = 'Brouillon'
             """), new { Cle = cle, DatePublication = DateTime.UtcNow });
     }
 
     public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)
     {
         var rows = await Cn.QueryAsync($"""
-            SELECT * FROM {T("DEFINITION_PROCESSUS")} ORDER BY CLE, VERSION
+            SELECT * FROM {T("DEFIN_PROCS")} ORDER BY CLE, VERSI
             """);
 
         return rows.Select(r => (DefinitionProcessus)MapperDefinition(r)).ToList();
@@ -108,14 +108,14 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
 
     private static DefinitionProcessus MapperDefinition(dynamic row)
     {
-        var def = JsonDefinitionParser.Deserialiser((string)row.DEFINITION_JSON);
-        def.Id = Convert.ToInt64(row.ID);
-        def.Version = Convert.ToInt32(row.VERSION);
-        def.Statut = ((string)row.STATUT) == "Publiee"
+        var def = JsonDefinitionParser.Deserialiser((string)row.DEFIN_JSON);
+        def.Id = Convert.ToInt64(row.NO_SEQ_DEFIN_PROCS);
+        def.Version = Convert.ToInt32(row.VERSI);
+        def.Statut = ((string)row.STAT) == "Publiee"
             ? StatutDefinition.Publiee : StatutDefinition.Brouillon;
-        def.DateCreation = Convert.ToDateTime(row.DATE_CREATION);
-        def.DatePublication = row.DATE_PUBLICATION is not null
-            ? Convert.ToDateTime(row.DATE_PUBLICATION)
+        def.DateCreation = Convert.ToDateTime(row.DH_CREA);
+        def.DatePublication = row.DH_PUBL is not null
+            ? Convert.ToDateTime(row.DH_PUBL)
             : null;
         return def;
     }
