@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Autofac;
 using BpmPlus.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,7 @@ public class ResolveurParametre
 
             case SourceValeurStatique svs:
                 _logger.LogDebug("Résolution SourceValeurStatique = {Valeur}", svs.Valeur);
-                return svs.Valeur;
+                return svs.Valeur is JsonElement je ? DenormaliserJsonElement(je) : svs.Valeur;
 
             case SourceQuery sq:
                 return await ResolveSourceQueryAsync(sq, contexte, ct);
@@ -162,4 +163,15 @@ public class ResolveurParametre
 
         return await handler.ExecuterAsync(contexte.IdInstance, contexte.AggregateId, parametres, contexte);
     }
+
+    private static object? DenormaliserJsonElement(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Number when element.TryGetInt64(out var l) => l,
+        JsonValueKind.Number => element.GetDecimal(),
+        JsonValueKind.Null => null,
+        _ => element.GetRawText()
+    };
 }
