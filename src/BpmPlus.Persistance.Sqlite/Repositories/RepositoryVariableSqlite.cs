@@ -72,7 +72,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
 
     private static (string type, string valeur) SerialiserValeur(object? valeur)
     {
-        if (valeur is null) return ("String", string.Empty);
+        if (valeur is null) return ("Null", string.Empty);
         return valeur switch
         {
             bool b => ("Bool", b.ToString()),
@@ -89,6 +89,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         return type switch
         {
+            "Null" => null,
             "Bool" => bool.Parse(valeur),
             "Int" => long.TryParse(valeur, out var l) ? l : (object?)int.Parse(valeur),
             "Decimal" => decimal.Parse(valeur, System.Globalization.CultureInfo.InvariantCulture),
