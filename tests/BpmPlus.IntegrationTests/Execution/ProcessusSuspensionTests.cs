@@ -16,8 +16,9 @@ public class ProcessusSuspensionTests : IDisposable
 
     private async Task<string> PublierProcessusInteractifAsync(string cle = "p-interactif")
     {
-        var def = new ProcessusBuilder(cle, "Processus interactif")
-            .Debut("debut")
+        var def = DefinitionBuilder.Definir(cle)
+            .Intitule("Processus interactif")
+            .Commence("debut")
             .Metier("debut", "Initialisation", b => b.Commande("NoOpCommand").Vers("tache"))
             .Interactif("tache", b => b.Tache("Valider le dossier").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
@@ -57,8 +58,9 @@ public class ProcessusSuspensionTests : IDisposable
     [Fact]
     public async Task TerminerEtape_InstanceActive_LanceEtatInstanceInvalideException()
     {
-        var def = new ProcessusBuilder("p-actif", "Actif")
-            .Debut("debut")
+        var def = DefinitionBuilder.Definir("p-actif")
+            .Intitule("Actif")
+            .Commence("debut")
             .Interactif("debut", b => b.Tache("T").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
             .Build();
@@ -117,8 +119,9 @@ public class ProcessusSuspensionTests : IDisposable
     public async Task ProcessusInteractifAvecSuspensions_MultiplesCycles()
     {
         // Deux tâches interactives consécutives
-        var def = new ProcessusBuilder("p-deux-taches", "Deux tâches")
-            .Debut("tache1")
+        var def = DefinitionBuilder.Definir("p-deux-taches")
+            .Intitule("Deux tâches")
+            .Commence("tache1")
             .Interactif("tache1", b => b.Tache("Première tâche").Vers("tache2"))
             .Interactif("tache2", b => b.Tache("Deuxième tâche").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))

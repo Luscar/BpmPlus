@@ -17,14 +17,16 @@ public class ProcessusSousProcessusTests : IDisposable
     [Fact]
     public async Task DemarrerSousProcessus_EnfantTermine_ParentContinueEtTermine()
     {
-        var enfant = new ProcessusBuilder("sp-enfant-1", "Enfant simple")
-            .Debut("tache")
+        var enfant = DefinitionBuilder.Definir("sp-enfant-1")
+            .Intitule("Enfant simple")
+            .Commence("tache")
             .Metier("tache")
             .Build();
         await _fixture.PublierDefinitionAsync(enfant);
 
-        var parent = new ProcessusBuilder("sp-parent-1", "Parent")
-            .Debut("sp")
+        var parent = DefinitionBuilder.Definir("sp-parent-1")
+            .Intitule("Parent")
+            .Commence("sp")
             .SousProcessus("sp", b => b.Definition("sp-enfant-1", 1).Vers("fin"))
             .Metier("fin")
             .Build();
@@ -40,15 +42,17 @@ public class ProcessusSousProcessusTests : IDisposable
     [Fact]
     public async Task DemarrerSousProcessus_NoeudFinalSansFlux_ParentTermine()
     {
-        var enfant = new ProcessusBuilder("sp-enfant-2", "Enfant final")
-            .Debut("tache")
+        var enfant = DefinitionBuilder.Definir("sp-enfant-2")
+            .Intitule("Enfant final")
+            .Commence("tache")
             .Metier("tache")
             .Build();
         await _fixture.PublierDefinitionAsync(enfant);
 
         // Nœud SousProcessus sans .Vers() — doit terminer le parent implicitement
-        var parent = new ProcessusBuilder("sp-parent-2", "Parent final")
-            .Debut("sp")
+        var parent = DefinitionBuilder.Definir("sp-parent-2")
+            .Intitule("Parent final")
+            .Commence("sp")
             .SousProcessus("sp", b => b.Definition("sp-enfant-2", 1))
             .Build();
         await _fixture.PublierDefinitionAsync(parent);
@@ -62,8 +66,9 @@ public class ProcessusSousProcessusTests : IDisposable
     [Fact]
     public async Task DemarrerSousProcessus_PropageVariablesSorties_VersParent()
     {
-        var enfant = new ProcessusBuilder("sp-enfant-3", "Enfant avec variable")
-            .Debut("set")
+        var enfant = DefinitionBuilder.Definir("sp-enfant-3")
+            .Intitule("Enfant avec variable")
+            .Commence("set")
             .Metier("set", b => b
                 .Commande("DefinirVariableCommand")
                 .Param("nom", Src.Val("resultat"))
@@ -71,8 +76,9 @@ public class ProcessusSousProcessusTests : IDisposable
             .Build();
         await _fixture.PublierDefinitionAsync(enfant);
 
-        var parent = new ProcessusBuilder("sp-parent-3", "Parent avec sortie")
-            .Debut("sp")
+        var parent = DefinitionBuilder.Definir("sp-parent-3")
+            .Intitule("Parent avec sortie")
+            .Commence("sp")
             .SousProcessus("sp", b => b
                 .Definition("sp-enfant-3", 1)
                 .Sortie("resultat")
@@ -91,8 +97,9 @@ public class ProcessusSousProcessusTests : IDisposable
     [Fact]
     public async Task DemarrerSousProcessus_DefinitionEnfantIntrouvable_LanceException()
     {
-        var parent = new ProcessusBuilder("sp-parent-4", "Parent orphelin")
-            .Debut("sp")
+        var parent = DefinitionBuilder.Definir("sp-parent-4")
+            .Intitule("Parent orphelin")
+            .Commence("sp")
             .SousProcessus("sp", b => b.Definition("inexistant", 1).Vers("fin"))
             .Metier("fin")
             .Build();
@@ -105,15 +112,17 @@ public class ProcessusSousProcessusTests : IDisposable
     [Fact]
     public async Task DemarrerSousProcessus_EnfantSuspendu_ParentSuspenduAvecEnfantLie()
     {
-        var enfant = new ProcessusBuilder("sp-enfant-5", "Enfant interactif")
-            .Debut("attente")
+        var enfant = DefinitionBuilder.Definir("sp-enfant-5")
+            .Intitule("Enfant interactif")
+            .Commence("attente")
             .Interactif("attente", b => b.Tache("Valider").Vers("fin"))
             .Metier("fin")
             .Build();
         await _fixture.PublierDefinitionAsync(enfant);
 
-        var parent = new ProcessusBuilder("sp-parent-5", "Parent avec enfant interactif")
-            .Debut("sp")
+        var parent = DefinitionBuilder.Definir("sp-parent-5")
+            .Intitule("Parent avec enfant interactif")
+            .Commence("sp")
             .SousProcessus("sp", b => b.Definition("sp-enfant-5", 1).Vers("fin"))
             .Metier("fin")
             .Build();

@@ -15,7 +15,20 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     public async Task<long> CreerAsync(InstanceProcessus instance, CancellationToken ct = default)
     {
         var maintenant = DateTime.UtcNow;
-        var id = await Cn.QuerySingleAsync<long>(OraParam($"""
+        var dp = new DynamicParameters();
+        dp.Add("CleDefinition", instance.CleDefinition);
+        dp.Add("VersionDefinition", instance.VersionDefinition);
+        dp.Add("AggregateId", instance.AggregateId);
+        dp.Add("Statut", instance.Statut.ToString());
+        dp.Add("IdNoeudCourant", instance.IdNoeudCourant);
+        dp.Add("IdInstanceParent", instance.IdInstanceParent);
+        dp.Add("DateDebut", instance.DateDebut);
+        dp.Add("DateFin", instance.DateFin);
+        dp.Add("DateCreation", maintenant);
+        dp.Add("DateMaj", maintenant);
+        dp.Add("NewId", dbType: DbType.Int64, direction: ParameterDirection.Output);
+
+        await Cn.ExecuteAsync(OraParam($"""
             INSERT INTO {T("INSTC_PROCS")}
                 (NO_SEQ_INSTC_PROCS, CLE_DEFIN, VERSI_DEFIN, AGGRE_ID, STAT,
                  ID_NOEUD_COUR, ID_INSTC_PARN, DH_DEB, DH_FIN,
@@ -25,22 +38,9 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                  :IdNoeudCourant, :IdInstanceParent, :DateDebut, :DateFin,
                  :DateCreation, :DateMaj)
             RETURNING NO_SEQ_INSTC_PROCS INTO :NewId
-            """),
-            new
-            {
-                instance.CleDefinition,
-                instance.VersionDefinition,
-                instance.AggregateId,
-                Statut = instance.Statut.ToString(),
-                instance.IdNoeudCourant,
-                instance.IdInstanceParent,
-                DateDebut = instance.DateDebut,
-                DateFin = instance.DateFin,
-                DateCreation = maintenant,
-                DateMaj = maintenant
-            });
+            """), dp);
 
-        return id;
+        return dp.Get<long>("NewId");
     }
 
     public async Task<InstanceProcessus?> ObtenirParIdAsync(long id, CancellationToken ct = default)

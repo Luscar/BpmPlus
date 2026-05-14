@@ -41,15 +41,21 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
 
         var nouvelleVersion = derniereVersion + 1;
 
-        var id = await Cn.QuerySingleAsync<long>(OraParam($"""
+        var dp = new DynamicParameters();
+        dp.Add("Cle", definition.Cle);
+        dp.Add("Version", nouvelleVersion);
+        dp.Add("Nom", definition.Nom);
+        dp.Add("Json", json);
+        dp.Add("DateCreation", maintenant);
+        dp.Add("NewId", dbType: DbType.Int64, direction: ParameterDirection.Output);
+
+        await Cn.ExecuteAsync(OraParam($"""
             INSERT INTO {T("DEFIN_PROCS")} (NO_SEQ_DEFIN_PROCS, CLE, VERSI, NOM_DEFIN, STAT, DEFIN_JSON, DH_CREA)
             VALUES ({T("SEQ_DEFIN")}.NEXTVAL, :Cle, :Version, :Nom, 'Brouillon', :Json, :DateCreation)
             RETURNING NO_SEQ_DEFIN_PROCS INTO :NewId
-            """),
-            new { definition.Cle, Version = nouvelleVersion, definition.Nom, Json = json, DateCreation = maintenant },
-            Tx);
+            """), dp, Tx);
 
-        return id;
+        return dp.Get<long>("NewId");
     }
 
     public async Task<DefinitionProcessus?> ObtenirBrouillonAsync(string cle, CancellationToken ct = default)

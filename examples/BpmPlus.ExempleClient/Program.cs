@@ -64,10 +64,9 @@ Console.WriteLine();
 
 AfficherSection("3/4", "Publication de la définition du processus");
 
-var definition = new ProcessusBuilder(
-        "approbation-commande",
-        "Processus d'approbation de commande",
-        "valider-commande")
+var definition = DefinitionBuilder.Definir("approbation-commande")
+    .Intitule("Processus d'approbation de commande")
+    .Commence("valider-commande")
 
     // Valide la commande et initialise la variable "statut" à "EnAttente"
     .Metier("valider-commande", "Valider la commande", "approbation-responsable")
@@ -76,13 +75,13 @@ var definition = new ProcessusBuilder(
     // La CommandePost est exécutée dans la même transaction que la reprise
     .Interactif("approbation-responsable", "Approbation responsable", n => n
         .Tache("Approuver la commande", "Veuillez approuver ou refuser la commande")
-        .CommandePost("EnregistrerDecisionCommand")
+        .AuRetour("EnregistrerDecisionCommand")
         .Vers("decision-approbation"))
 
     // Branchement XOR via query (EstCommandeApprouveeHandler lit la variable "statut")
     .Decision("decision-approbation", "Décision d'approbation", n => n
-        .SiQuery("EstCommandeApprouveeQuery").Vers("notification-approbation")
-        .Defaut().Vers("notification-refus"))
+        .SiQuery("EstCommandeApprouveeQuery").Aller("notification-approbation")
+        .Sinon.Aller("notification-refus"))
 
     // Nœuds finaux (EstFinale implicite car vers: omis)
     .Metier("notification-approbation", "Notifier approbation")
@@ -127,10 +126,10 @@ await ExecuterScenario(container, BaseDeDonnees,
 Console.WriteLine();
 AfficherBanniere("Exemple terminé — inspectez bpm_exemple.db pour les données persistées");
 
-// ── Bonus : démonstration du ProcessusV2Builder ───────────────────────────────
+// ── Bonus : démonstration du DefinitionBuilder ────────────────────────────────
 
-AfficherSection("Bonus", "ProcessusV2Builder — phases, DSL enrichi, export Mermaid");
-ExempleProcessusV2.AfficherDemo();
+AfficherSection("Bonus", "DefinitionBuilder — phases, DSL enrichi, export Mermaid");
+ExempleDefinitionBuilder.AfficherDemo();
 
 // ── Fonctions ─────────────────────────────────────────────────────────────────
 

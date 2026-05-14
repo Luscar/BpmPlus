@@ -5,13 +5,14 @@ using Xunit;
 
 namespace BpmPlus.UnitTests.Definition;
 
-public class ProcessusBuilderTests
+public class DefinitionBuilderTests
 {
     [Fact]
     public void Build_ProcessusLineaire_CreesDefinitionCorrectement()
     {
-        var def = new ProcessusBuilder("cmd-test", "Test Commande")
-            .Debut("start")
+        var def = DefinitionBuilder.Definir("cmd-test")
+            .Intitule("Test Commande")
+            .Commence("start")
             .Metier("start", "Valider", "fin")
             .Metier("fin")
             .Build();
@@ -25,29 +26,29 @@ public class ProcessusBuilderTests
     [Fact]
     public void Build_SansCle_LanceInvalidOperation()
     {
-        var act = () => new ProcessusBuilder("").Debut("x").Metier("x").Build();
+        var act = () => DefinitionBuilder.Definir("").Commence("x").Metier("x").Build();
         act.Should().Throw<InvalidOperationException>().WithMessage("*clé*");
     }
 
     [Fact]
     public void Build_SansDebut_LanceInvalidOperation()
     {
-        var act = () => new ProcessusBuilder("cle").Metier("n").Build();
+        var act = () => DefinitionBuilder.Definir("cle").Metier("n").Build();
         act.Should().Throw<InvalidOperationException>().WithMessage("*début*");
     }
 
     [Fact]
     public void Build_SansNoeuds_LanceInvalidOperation()
     {
-        var act = () => new ProcessusBuilder("cle").Debut("start").Build();
+        var act = () => DefinitionBuilder.Definir("cle").Commence("start").Build();
         act.Should().Throw<InvalidOperationException>().WithMessage("*nœud*");
     }
 
     [Fact]
     public void Build_NoeudDebutAbsent_LanceInvalidOperation()
     {
-        var act = () => new ProcessusBuilder("cle")
-            .Debut("missing")
+        var act = () => DefinitionBuilder.Definir("cle")
+            .Commence("missing")
             .Metier("autre")
             .Build();
         act.Should().Throw<InvalidOperationException>().WithMessage("*missing*");
@@ -56,8 +57,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void Metier_NomCommandeParDefaut_EstPascalCaseAvecSuffixeCommand()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("valider-commande")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("valider-commande")
             .Metier("valider-commande")
             .Build();
 
@@ -68,8 +69,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void Metier_AvecNomCommandeExplicite_UtiliseCeNom()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("n")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("n")
             .Metier("n", "Nom", b => b.Commande("MaCommandeSpeciale"))
             .Build();
 
@@ -80,8 +81,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void Metier_AvecParametres_StockeLesParametres()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("n")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("n")
             .Metier("n", b => b
                 .Param("montant")
                 .Param("devise", Src.Val("EUR")))
@@ -97,12 +98,12 @@ public class ProcessusBuilderTests
     [Fact]
     public void Decision_AvecConditionEtDefaut_CreesFluxCorrects()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("start")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("start")
             .Metier("start", "Start", "check")
             .Decision("check", d => d
-                .SiEgal("statut", "ok").Vers("fin-ok")
-                .Defaut().Vers("fin-ko"))
+                .SiVariable("statut").EstEgalA("ok").Aller("fin-ok")
+                .Sinon.Aller("fin-ko"))
             .Metier("fin-ok")
             .Metier("fin-ko")
             .Build();
@@ -117,8 +118,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void AttenteSignal_SansVers_EstFinaleEtSignalNomCorrect()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("wait")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("wait")
             .AttenteSignal("wait", "mon-signal")
             .Build();
 
@@ -131,8 +132,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void AttenteSignal_AvecVers_NEstPasFinale()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("wait")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("wait")
             .AttenteSignal("wait", "signal-1", "suite")
             .Metier("suite")
             .Build();
@@ -145,8 +146,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void Interactif_AvecTacheEtVers_CreesNoeudCorrect()
     {
-        var def = new ProcessusBuilder("p")
-            .Debut("tache")
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("tache")
             .Interactif("tache", ib => ib.Tache("Valider le dossier").Vers("fin"))
             .Metier("fin")
             .Build();
@@ -161,9 +162,9 @@ public class ProcessusBuilderTests
     public void AttenteTemps_AvecEcheanceStatique_CreesNoeudCorrect()
     {
         var echeance = new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc);
-        var def = new ProcessusBuilder("p")
-            .Debut("attente")
-            .AttenteTemps("attente", b => b.Echeance(echeance).Vers("suite"))
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("attente")
+            .AttenteTemps("attente", b => b.EcheanceFixe(echeance).Vers("suite"))
             .Metier("suite")
             .Build();
 
@@ -175,8 +176,8 @@ public class ProcessusBuilderTests
     [Fact]
     public void SousProcessus_AvecDefinitionEtSorties_CreesNoeudCorrect()
     {
-        var def = new ProcessusBuilder("parent")
-            .Debut("sp")
+        var def = DefinitionBuilder.Definir("parent")
+            .Commence("sp")
             .SousProcessus("sp", b => b
                 .Definition("enfant", 1)
                 .Sorties("resultat", "erreur")

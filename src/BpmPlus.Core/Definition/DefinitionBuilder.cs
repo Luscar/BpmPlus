@@ -4,7 +4,7 @@ using BpmPlus.Abstractions;
 namespace BpmPlus.Core.Definition;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  ProcessusV2Builder  —  New-generation process definition DSL
+//  DefinitionBuilder  —  New-generation process definition DSL
 //
 //  Design goals
 //  ────────────
@@ -18,7 +18,7 @@ namespace BpmPlus.Core.Definition;
 //
 //  Quick example
 //  ─────────────
-//  var def = ProcessusV2
+//  var def = DefinitionBuilder
 //      .Definir("approbation-commande")
 //      .Intitule("Processus d'approbation de commande")
 //      .Description("Du bon de commande jusqu'à la notification.")
@@ -44,17 +44,9 @@ namespace BpmPlus.Core.Definition;
 //      .BuildStrict();   // validates dead-ends and orphan nodes
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+// ── DefinitionBuilder ──────────────────────────────────────────────────────────
 
-/// <summary>Static factory for the v2 process definition DSL.</summary>
-public static class ProcessusV2
-{
-    public static ProcessusV2Builder Definir(string cle) => new(cle);
-}
-
-// ── ProcessusV2Builder ─────────────────────────────────────────────────────────
-
-public sealed class ProcessusV2Builder
+public sealed class DefinitionBuilder
 {
     private readonly string _cle;
     private string _nom         = string.Empty;
@@ -64,17 +56,19 @@ public sealed class ProcessusV2Builder
     private readonly List<string>         _etiquettes = new();
     private readonly List<NoeudProcessus> _noeuds     = new();
 
-    internal ProcessusV2Builder(string cle) => _cle = cle;
+    public static DefinitionBuilder Definir(string cle) => new(cle);
+
+    internal DefinitionBuilder(string cle) => _cle = cle;
 
     // ── Process-level metadata ────────────────────────────────────────────────
 
-    public ProcessusV2Builder Intitule(string nom)              { _nom         = nom;    return this; }
-    public ProcessusV2Builder Description(string description)   { _description = description; return this; }
-    public ProcessusV2Builder Auteur(string auteur)             { _auteur      = auteur; return this; }
-    public ProcessusV2Builder Etiquettes(params string[] tags)  { _etiquettes.AddRange(tags); return this; }
+    public DefinitionBuilder Intitule(string nom)              { _nom         = nom;    return this; }
+    public DefinitionBuilder Description(string description)   { _description = description; return this; }
+    public DefinitionBuilder Auteur(string auteur)             { _auteur      = auteur; return this; }
+    public DefinitionBuilder Etiquettes(params string[] tags)  { _etiquettes.AddRange(tags); return this; }
 
     /// <summary>Identifies the start node of the process.</summary>
-    public ProcessusV2Builder Commence(string noeudId)          { _debut = noeudId; return this; }
+    public DefinitionBuilder Commence(string noeudId)          { _debut = noeudId; return this; }
 
     // ── Phase grouping ────────────────────────────────────────────────────────
 
@@ -83,7 +77,7 @@ public sealed class ProcessusV2Builder
     /// they have no runtime effect but greatly improve readability of complex
     /// definitions.
     /// </summary>
-    public ProcessusV2Builder Phase(string nom, Action<PhaseV2Builder> configure)
+    public DefinitionBuilder Phase(string nom, Action<PhaseV2Builder> configure)
     {
         configure(new PhaseV2Builder(nom, this));
         return this;
@@ -91,7 +85,7 @@ public sealed class ProcessusV2Builder
 
     // ── Internal registration (called by PhaseV2Builder and by pattern helpers) ─
 
-    internal ProcessusV2Builder AjouterNoeud(NoeudProcessus noeud)
+    internal DefinitionBuilder AjouterNoeud(NoeudProcessus noeud)
     {
         _noeuds.Add(noeud);
         return this;
@@ -100,72 +94,72 @@ public sealed class ProcessusV2Builder
     // ── Métier ────────────────────────────────────────────────────────────────
 
     /// <summary>Final business node (no next node ⇒ EstFinale = true).</summary>
-    public ProcessusV2Builder Metier(string id, string nom = "")
+    public DefinitionBuilder Metier(string id, string nom = "")
     {
         var b = new MetierV2Builder(id, nom); b.Final();
         return AjouterNoeud(b.Build());
     }
 
     /// <summary>Business node with an explicit next node.</summary>
-    public ProcessusV2Builder Metier(string id, string nom, string vers)
+    public DefinitionBuilder Metier(string id, string nom, string vers)
     {
         var b = new MetierV2Builder(id, nom); b.Puis(vers);
         return AjouterNoeud(b.Build());
     }
 
     /// <summary>Business node with advanced configuration.</summary>
-    public ProcessusV2Builder Metier(string id, string nom, Action<MetierV2Builder> configure)
+    public DefinitionBuilder Metier(string id, string nom, Action<MetierV2Builder> configure)
     {
         var b = new MetierV2Builder(id, nom);
         configure(b);
         return AjouterNoeud(b.Build());
     }
 
-    public ProcessusV2Builder Metier(string id, Action<MetierV2Builder> configure)
+    public DefinitionBuilder Metier(string id, Action<MetierV2Builder> configure)
         => Metier(id, string.Empty, configure);
 
     // ── Interactif ────────────────────────────────────────────────────────────
 
-    public ProcessusV2Builder Interactif(string id, string nom, Action<InteractifV2Builder> configure)
+    public DefinitionBuilder Interactif(string id, string nom, Action<InteractifV2Builder> configure)
     {
         var b = new InteractifV2Builder(id, nom);
         configure(b);
         return AjouterNoeud(b.Build());
     }
 
-    public ProcessusV2Builder Interactif(string id, Action<InteractifV2Builder> configure)
+    public DefinitionBuilder Interactif(string id, Action<InteractifV2Builder> configure)
         => Interactif(id, string.Empty, configure);
 
     // ── Décision ──────────────────────────────────────────────────────────────
 
-    public ProcessusV2Builder Decision(string id, string nom, Action<DecisionV2Builder> configure)
+    public DefinitionBuilder Decision(string id, string nom, Action<DecisionV2Builder> configure)
     {
         var b = new DecisionV2Builder(id, nom);
         configure(b);
         return AjouterNoeud(b.Build());
     }
 
-    public ProcessusV2Builder Decision(string id, Action<DecisionV2Builder> configure)
+    public DefinitionBuilder Decision(string id, Action<DecisionV2Builder> configure)
         => Decision(id, string.Empty, configure);
 
     // ── AttenteTemps ──────────────────────────────────────────────────────────
 
-    public ProcessusV2Builder AttenteTemps(string id, string nom, Action<AttenteTempsV2Builder> configure)
+    public DefinitionBuilder AttenteTemps(string id, string nom, Action<AttenteTempsV2Builder> configure)
     {
         var b = new AttenteTempsV2Builder(id, nom);
         configure(b);
         return AjouterNoeud(b.Build());
     }
 
-    public ProcessusV2Builder AttenteTemps(string id, Action<AttenteTempsV2Builder> configure)
+    public DefinitionBuilder AttenteTemps(string id, Action<AttenteTempsV2Builder> configure)
         => AttenteTemps(id, string.Empty, configure);
 
     // ── AttenteSignal ─────────────────────────────────────────────────────────
 
-    public ProcessusV2Builder AttenteSignal(string id, string signal, string? vers = null)
+    public DefinitionBuilder AttenteSignal(string id, string signal, string? vers = null)
         => AttenteSignal(id, string.Empty, signal, vers);
 
-    public ProcessusV2Builder AttenteSignal(string id, string nom, string signal, string? vers = null)
+    public DefinitionBuilder AttenteSignal(string id, string nom, string signal, string? vers = null)
     {
         return AjouterNoeud(new NoeudAttenteSignal
         {
@@ -179,14 +173,14 @@ public sealed class ProcessusV2Builder
 
     // ── SousProcessus ─────────────────────────────────────────────────────────
 
-    public ProcessusV2Builder SousProcessus(string id, string nom, Action<SousProcessusV2Builder> configure)
+    public DefinitionBuilder SousProcessus(string id, string nom, Action<SousDefinitionBuilder> configure)
     {
-        var b = new SousProcessusV2Builder(id, nom);
+        var b = new SousDefinitionBuilder(id, nom);
         configure(b);
         return AjouterNoeud(b.Build());
     }
 
-    public ProcessusV2Builder SousProcessus(string id, Action<SousProcessusV2Builder> configure)
+    public DefinitionBuilder SousProcessus(string id, Action<SousDefinitionBuilder> configure)
         => SousProcessus(id, string.Empty, configure);
 
     // ── Pattern templates ─────────────────────────────────────────────────────
@@ -198,7 +192,7 @@ public sealed class ProcessusV2Builder
     /// Creates two nodes: <paramref name="idTache"/> and <paramref name="idDecision"/>.
     /// </para>
     /// </summary>
-    public ProcessusV2Builder PatternApprobation(
+    public DefinitionBuilder PatternApprobation(
         string idTache,
         string intituleTache,
         string idDecision,
@@ -318,15 +312,15 @@ public sealed class ProcessusV2Builder
 
 /// <summary>
 /// Scoped builder for a named phase. Delegates node registration to the parent
-/// <see cref="ProcessusV2Builder"/>. Phases carry no runtime meaning —
+/// <see cref="DefinitionBuilder"/>. Phases carry no runtime meaning —
 /// they exist solely to organise code.
 /// </summary>
 public sealed class PhaseV2Builder
 {
     private readonly string               _nom;
-    private readonly ProcessusV2Builder   _parent;
+    private readonly DefinitionBuilder   _parent;
 
-    internal PhaseV2Builder(string nom, ProcessusV2Builder parent)
+    internal PhaseV2Builder(string nom, DefinitionBuilder parent)
     {
         _nom    = nom;
         _parent = parent;
@@ -405,13 +399,13 @@ public sealed class PhaseV2Builder
         return this;
     }
 
-    public PhaseV2Builder SousProcessus(string id, string nom, Action<SousProcessusV2Builder> configure)
+    public PhaseV2Builder SousProcessus(string id, string nom, Action<SousDefinitionBuilder> configure)
     {
-        var b = new SousProcessusV2Builder(id, nom); configure(b);
+        var b = new SousDefinitionBuilder(id, nom); configure(b);
         _parent.AjouterNoeud(b.Build()); return this;
     }
 
-    public PhaseV2Builder SousProcessus(string id, Action<SousProcessusV2Builder> configure)
+    public PhaseV2Builder SousProcessus(string id, Action<SousDefinitionBuilder> configure)
         => SousProcessus(id, string.Empty, configure);
 }
 
@@ -775,9 +769,9 @@ public sealed class AttenteTempsV2Builder
     };
 }
 
-// ── SousProcessusV2Builder ─────────────────────────────────────────────────────
+// ── SousDefinitionBuilder ─────────────────────────────────────────────────────
 
-public sealed class SousProcessusV2Builder
+public sealed class SousDefinitionBuilder
 {
     private readonly string            _id;
     private readonly string            _nom;
@@ -787,20 +781,20 @@ public sealed class SousProcessusV2Builder
     private readonly List<string>      _sorties = new();
     private readonly List<FluxSortant> _flux    = new();
 
-    public SousProcessusV2Builder(string id, string nom) { _id = id; _nom = nom; }
+    public SousDefinitionBuilder(string id, string nom) { _id = id; _nom = nom; }
 
-    public SousProcessusV2Builder Definition(string cle, int version = 1)
+    public SousDefinitionBuilder Definition(string cle, int version = 1)
     { _cle = cle; _version = version; return this; }
 
     /// <summary>Declares a variable whose value is propagated back to the parent process.</summary>
-    public SousProcessusV2Builder Sortie(string variable)          { _sorties.Add(variable); return this; }
+    public SousDefinitionBuilder Sortie(string variable)          { _sorties.Add(variable); return this; }
 
     /// <summary>Declares multiple output variables in one call.</summary>
-    public SousProcessusV2Builder Sorties(params string[] variables) { _sorties.AddRange(variables); return this; }
+    public SousDefinitionBuilder Sorties(params string[] variables) { _sorties.AddRange(variables); return this; }
 
-    public SousProcessusV2Builder Puis(string id)  { _flux.Add(new FluxSortant { Vers = id }); return this; }
-    public SousProcessusV2Builder Vers(string id)  { _flux.Add(new FluxSortant { Vers = id }); return this; }
-    public SousProcessusV2Builder Final()          { _final = true; return this; }
+    public SousDefinitionBuilder Puis(string id)  { _flux.Add(new FluxSortant { Vers = id }); return this; }
+    public SousDefinitionBuilder Vers(string id)  { _flux.Add(new FluxSortant { Vers = id }); return this; }
+    public SousDefinitionBuilder Final()          { _final = true; return this; }
 
     internal NoeudSousProcessus Build() => new()
     {
@@ -943,6 +937,16 @@ public static class DefinitionProcessusExtensions
     /// </summary>
     public static string ToMermaid(this DefinitionProcessus definition)
         => MermaidExporter.Generer(definition);
+}
+
+// ── Src : parameter source helpers ────────────────────────────────────────────
+
+/// <summary>Shortcuts for creating parameter sources.</summary>
+public static class Src
+{
+    public static ISourceParametre Var(string nom)      => new SourceVariable(nom);
+    public static ISourceParametre Val(object? valeur)  => new SourceValeurStatique(valeur);
+    public static ISourceParametre Query(string nom)    => new SourceQuery(nom);
 }
 
 // ── Internal utility ───────────────────────────────────────────────────────────

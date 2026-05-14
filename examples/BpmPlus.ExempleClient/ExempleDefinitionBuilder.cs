@@ -4,7 +4,7 @@ using BpmPlus.Core.Definition;
 namespace BpmPlus.ExempleClient;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  ExempleProcessusV2
+//  ExempleDefinitionBuilder
 //
 //  Shows the same "approbation-commande" process written with the V2 builder,
 //  then demonstrates a more complex "gestion-achat" process that shows off:
@@ -19,7 +19,7 @@ namespace BpmPlus.ExempleClient;
 //    • .ToMermaid() extension    — works on any existing DefinitionProcessus
 // ─────────────────────────────────────────────────────────────────────────────
 
-public static class ExempleProcessusV2
+public static class ExempleDefinitionBuilder
 {
     // ── Reproduire l'exemple existant en style V2 ──────────────────────────────
 
@@ -30,7 +30,7 @@ public static class ExempleProcessusV2
     /// </summary>
     public static DefinitionProcessus ApprobationCommandeV2()
     {
-        return ProcessusV2
+        return DefinitionBuilder
             .Definir("approbation-commande-v2")
             .Intitule("Processus d'approbation de commande (V2)")
             .Description(
@@ -70,7 +70,7 @@ public static class ExempleProcessusV2
     /// </summary>
     public static DefinitionProcessus GestionAchat(out string mermaid)
     {
-        return ProcessusV2
+        return DefinitionBuilder
             .Definir("gestion-achat")
             .Intitule("Gestion des demandes d'achat")
             .Description(
@@ -194,7 +194,7 @@ public static class ExempleProcessusV2
     {
         Console.WriteLine();
         Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
-        Console.WriteLine("  │  ProcessusV2Builder — démonstration                        │");
+        Console.WriteLine("  │  DefinitionBuilder — démonstration                              │");
         Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
         Console.WriteLine();
 

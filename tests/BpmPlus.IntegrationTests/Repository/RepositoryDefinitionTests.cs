@@ -15,8 +15,9 @@ public class RepositoryDefinitionTests : IDisposable
     private readonly BpmFixture _fixture = new();
 
     private static DefinitionProcessus ConstruireDefinition(string cle = "proc-test") =>
-        new ProcessusBuilder(cle, $"Processus {cle}")
-            .Debut("start")
+        DefinitionBuilder.Definir(cle)
+            .Intitule($"Processus {cle}")
+            .Commence("start")
             .Metier("start", b => b.Commande("NoOpCommand").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
             .Build();
