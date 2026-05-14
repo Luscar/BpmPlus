@@ -118,7 +118,13 @@ public class BpmModule : Autofac.Module
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
                 builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
-                builder.RegisterType<SchemaCreator>()
+                builder.Register(ctx => new SchemaCreator(
+                        ctx.Resolve<IRepositoryDefinition>(),
+                        ctx.Resolve<IRepositoryInstance>(),
+                        ctx.Resolve<IRepositoryVariable>(),
+                        ctx.Resolve<IRepositoryEvenement>(),
+                        ctx.Resolve<IRepositoryAttenteSignal>(),
+                        prefixe))
                     .AsSelf().InstancePerLifetimeScope();
                 break;
 
