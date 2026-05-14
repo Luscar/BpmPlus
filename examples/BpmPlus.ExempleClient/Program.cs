@@ -127,6 +127,11 @@ await ExecuterScenario(container, BaseDeDonnees,
 Console.WriteLine();
 AfficherBanniere("Exemple terminé — inspectez bpm_exemple.db pour les données persistées");
 
+// ── Bonus : démonstration du ProcessusV2Builder ───────────────────────────────
+
+AfficherSection("Bonus", "ProcessusV2Builder — phases, DSL enrichi, export Mermaid");
+ExempleProcessusV2.AfficherDemo();
+
 // ── Fonctions ─────────────────────────────────────────────────────────────────
 
 static SqliteConnection OuvrirConnexion(string db)
