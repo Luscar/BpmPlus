@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstance
 {
-    public RepositoryInstanceOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
+    public RepositoryInstanceOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 

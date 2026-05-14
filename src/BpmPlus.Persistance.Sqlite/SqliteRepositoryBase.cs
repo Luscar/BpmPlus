@@ -10,11 +10,12 @@ public abstract class SqliteRepositoryBase
 {
     protected readonly string Prefixe;
     protected readonly IDbConnection Cn;
-    protected IDbTransaction? Tx => null;
+    protected readonly IDbTransaction? Tx;
 
-    protected SqliteRepositoryBase(IDbConnection connection, string prefixe)
+    protected SqliteRepositoryBase(IDbConnection connection, string prefixe, IDbTransaction? tx = null)
     {
         Cn = connection;
+        Tx = tx;
         Prefixe = prefixe.TrimEnd('_').ToUpperInvariant();
     }
 

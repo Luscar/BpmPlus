@@ -100,30 +100,30 @@ public class BpmModule : Autofac.Module
         switch (_config.Backend)
         {
             case BackendPersistance.Sqlite:
-                builder.Register(ctx => new RepositoryDefinitionSqlite(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryDefinitionSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryDefinition>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryInstanceSqlite(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryInstanceSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryInstance>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryVariableSqlite(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryVariableSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryVariable>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryEvenementSqlite(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryEvenementSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryAttenteSignalSqlite(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 builder.RegisterType<SchemaCreator>()
                     .AsSelf().InstancePerLifetimeScope();
                 break;
 
             case BackendPersistance.Oracle:
-                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryDefinition>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryInstance>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryVariable>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbConnection>(), prefixe))
+                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 break;
         }

@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariable
 {
-    public RepositoryVariableSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
+    public RepositoryVariableSqlite(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -28,7 +28,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         await Cn.ExecuteAsync($"""
             DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance });
+            """, new { IdInstance = idInstance }, Tx);
 
         foreach (var (nom, valeur) in variables)
         {
@@ -47,7 +47,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         var rows = await Cn.QueryAsync($"""
             SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance });
+            """, new { IdInstance = idInstance }, Tx);
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)

@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAttenteSignal
 {
-    public RepositoryAttenteSignalOracle(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
+    public RepositoryAttenteSignalOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
