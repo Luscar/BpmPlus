@@ -93,7 +93,10 @@ var definition = DefinitionBuilder.Definir("approbation-commande")
     using var conn = OuvrirConnexion(BaseDeDonnees);
     using var tx   = conn.BeginTransaction();
     using var scope = container.BeginLifetimeScope(b =>
-        b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
+    {
+        b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned();
+        b.RegisterInstance(tx).As<IDbTransaction>().ExternallyOwned();
+    });
 
     var serviceBpm = scope.Resolve<IServiceBpm>();
     await serviceBpm.SauvegarderDefinitionAsync(definition);
@@ -170,7 +173,10 @@ static async Task ExecuterScenario(
         using var conn  = OuvrirConnexion(db);
         using var tx    = conn.BeginTransaction();
         using var scope = container.BeginLifetimeScope(b =>
-            b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
+        {
+            b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned();
+            b.RegisterInstance(tx).As<IDbTransaction>().ExternallyOwned();
+        });
 
         idInstance = await scope.Resolve<IServiceBpm>().DemarrerAsync(
             "approbation-commande",
@@ -201,7 +207,10 @@ static async Task ExecuterScenario(
         using var conn  = OuvrirConnexion(db);
         using var tx    = conn.BeginTransaction();
         using var scope = container.BeginLifetimeScope(b =>
-            b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned());
+        {
+            b.RegisterInstance(conn).As<IDbConnection>().ExternallyOwned();
+            b.RegisterInstance(tx).As<IDbTransaction>().ExternallyOwned();
+        });
 
         var serviceBpm = scope.Resolve<IServiceBpm>();
         await serviceBpm.ModifierVariableAsync(idInstance, "statut", decision);

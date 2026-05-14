@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Sqlite.Repositories;
 
 public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariable
 {
-    public RepositoryVariableSqlite(IDbConnection connection, string prefixe) : base(connection, prefixe) { }
+    public RepositoryVariableSqlite(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -28,7 +28,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         await Cn.ExecuteAsync($"""
             DELETE FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance });
+            """, new { IdInstance = idInstance }, Tx);
 
         foreach (var (nom, valeur) in variables)
         {
@@ -47,7 +47,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         var rows = await Cn.QueryAsync($"""
             SELECT NOM, TYPE, VALEUR FROM {T("VARIABLE_PROCESSUS")} WHERE ID_INSTANCE = @IdInstance
-            """, new { IdInstance = idInstance });
+            """, new { IdInstance = idInstance }, Tx);
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
@@ -72,7 +72,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
 
     private static (string type, string valeur) SerialiserValeur(object? valeur)
     {
-        if (valeur is null) return ("String", string.Empty);
+        if (valeur is null) return ("Null", string.Empty);
         return valeur switch
         {
             bool b => ("Bool", b.ToString()),
@@ -89,6 +89,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
     {
         return type switch
         {
+            "Null" => null,
             "Bool" => bool.Parse(valeur),
             "Int" => long.TryParse(valeur, out var l) ? l : (object?)int.Parse(valeur),
             "Decimal" => decimal.Parse(valeur, System.Globalization.CultureInfo.InvariantCulture),

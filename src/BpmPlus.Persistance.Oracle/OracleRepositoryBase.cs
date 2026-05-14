@@ -9,11 +9,12 @@ public abstract class OracleRepositoryBase
 {
     protected readonly string Prefixe;
     protected readonly IDbConnection Cn;
-    protected IDbTransaction? Tx => null;
+    protected readonly IDbTransaction? Tx;
 
-    protected OracleRepositoryBase(IDbConnection connection, string prefixe)
+    protected OracleRepositoryBase(IDbConnection connection, string prefixe, IDbTransaction? tx = null)
     {
         Cn = connection;
+        Tx = tx;
         Prefixe = prefixe.TrimEnd('_').ToUpperInvariant();
     }
 
