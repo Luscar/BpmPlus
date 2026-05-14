@@ -65,7 +65,7 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
 
     private static (string type, string valeur) SerialiserValeur(object? valeur)
     {
-        if (valeur is null) return ("Null", string.Empty);
+        if (valeur is null) return ("Null", "NULL");
         return valeur switch
         {
             bool b => ("Bool", b.ToString()),
