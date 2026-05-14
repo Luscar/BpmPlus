@@ -148,9 +148,12 @@ public class BpmModule : Autofac.Module
 
             foreach (var type in commandeTypes)
             {
+                var nomCommande = GetNomCommande(type);
+                if (nomCommande is null) continue;
+
                 builder.RegisterType(type)
                     .As<IBpmHandlerCommande>()
-                    .Keyed<IBpmHandlerCommande>(GetNomCommande(type))
+                    .Keyed<IBpmHandlerCommande>(nomCommande)
                     .InstancePerLifetimeScope();
             }
 
@@ -213,7 +216,7 @@ public class BpmModule : Autofac.Module
         }
         catch
         {
-            return type.Name;
+            return null;
         }
     }
 
