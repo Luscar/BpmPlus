@@ -8,12 +8,17 @@ namespace BpmPlus.Persistance.Oracle;
 public abstract class OracleRepositoryBase
 {
     protected readonly string Prefixe;
-    protected readonly IDbConnection Cn;
+    private readonly Lazy<IDbConnection> _cn;
+    protected IDbConnection Cn => _cn.Value;
     protected readonly IDbTransaction? Tx;
 
-    protected OracleRepositoryBase(IDbConnection connection, string prefixe, IDbTransaction? tx = null)
+    // La connexion est résolue via Lazy<T> : elle n'est ouverte qu'au premier accès,
+    // c'est-à-dire au moment où la première requête s'exécute. Si le appelant a
+    // démarré un TransactionScope avant d'appeler BpmPlus, la connexion s'ouvre à
+    // l'intérieur de ce scope et s'y enrôle automatiquement.
+    protected OracleRepositoryBase(Lazy<IDbConnection> connection, string prefixe, IDbTransaction? tx = null)
     {
-        Cn = connection;
+        _cn = connection;
         Tx = tx;
         Prefixe = prefixe.TrimEnd('_').ToUpperInvariant();
     }

@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefinition
 {
-    public RepositoryDefinitionOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
+    public RepositoryDefinitionOracle(Lazy<IDbConnection> connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public async Task CreerTablesAsync(IDbConnection connection)
     {
@@ -100,7 +100,7 @@ public class RepositoryDefinitionOracle : OracleRepositoryBase, IRepositoryDefin
             UPDATE {T("DEFIN_PROCS")}
             SET STAT = 'Publiee', DH_PUBL = :DatePublication
             WHERE CLE = :Cle AND STAT = 'Brouillon'
-            """), new { Cle = cle, DatePublication = DateTime.UtcNow });
+            """), new { Cle = cle, DatePublication = DateTime.UtcNow }, Tx);
     }
 
     public async Task<IReadOnlyList<DefinitionProcessus>> ObtenirToutesAsync(CancellationToken ct = default)

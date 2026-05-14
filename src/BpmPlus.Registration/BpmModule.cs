@@ -123,15 +123,15 @@ public class BpmModule : Autofac.Module
                 break;
 
             case BackendPersistance.Oracle:
-                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
+                builder.Register(ctx => new RepositoryDefinitionOracle(ctx.Resolve<Lazy<IDbConnection>>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryDefinition>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
+                builder.Register(ctx => new RepositoryInstanceOracle(ctx.Resolve<Lazy<IDbConnection>>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryInstance>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
+                builder.Register(ctx => new RepositoryVariableOracle(ctx.Resolve<Lazy<IDbConnection>>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryVariable>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
+                builder.Register(ctx => new RepositoryEvenementOracle(ctx.Resolve<Lazy<IDbConnection>>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryEvenement>().InstancePerLifetimeScope();
-                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<IDbConnection>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
+                builder.Register(ctx => new RepositoryAttenteSignalOracle(ctx.Resolve<Lazy<IDbConnection>>(), prefixe, ctx.ResolveOptional<IDbTransaction>()))
                     .As<IRepositoryAttenteSignal>().InstancePerLifetimeScope();
                 break;
         }
