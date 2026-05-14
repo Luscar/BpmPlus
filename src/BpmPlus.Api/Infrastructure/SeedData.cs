@@ -11,18 +11,17 @@ public static class SeedData
         if (existantes.Any()) return;
 
         // ── 1. Processus d'approbation de commande ───────────────────────────
-        var defCommande = new ProcessusBuilder(
-                "commande-achat",
-                "Approbation de commande d'achat",
-                "valider-commande")
+        var defCommande = DefinitionBuilder.Definir("commande-achat")
+            .Intitule("Approbation de commande d'achat")
+            .Commence("valider-commande")
             .Metier("valider-commande", "Valider la commande", "approbation-responsable")
             .Interactif("approbation-responsable", "Approbation responsable", n => n
                 .Tache("Approuver la commande",
                     "Vérifiez et approuvez ou refusez la commande d'achat.")
                 .Vers("decision-approbation"))
             .Decision("decision-approbation", "Décision", n => n
-                .SiEgal("approuve", true).Vers("notification-approbation")
-                .Defaut().Vers("notification-refus"))
+                .SiVariable("approuve").EstEgalA(true).Aller("notification-approbation")
+                .Sinon.Aller("notification-refus"))
             .Metier("notification-approbation", "Notifier approbation")
             .Metier("notification-refus", "Notifier refus")
             .Build();
@@ -31,10 +30,9 @@ public static class SeedData
         await bpm.PublierDefinitionAsync("commande-achat");
 
         // ── 2. Processus d'intégration employé (avec signal + sous-processus) ─
-        var defOnboarding = new ProcessusBuilder(
-                "onboarding-employe",
-                "Intégration nouvel employé",
-                "creer-compte")
+        var defOnboarding = DefinitionBuilder.Definir("onboarding-employe")
+            .Intitule("Intégration nouvel employé")
+            .Commence("creer-compte")
             .Metier("creer-compte", "Créer compte employé", "configurer-acces")
             .Interactif("configurer-acces", "Configuration des accès", n => n
                 .Tache("Configurer les droits d'accès",
@@ -51,10 +49,9 @@ public static class SeedData
         await bpm.PublierDefinitionAsync("onboarding-employe");
 
         // ── 3. Processus de formation sécurité (sous-processus) ──────────────
-        var defFormation = new ProcessusBuilder(
-                "formation-securite",
-                "Formation sécurité obligatoire",
-                "module-incendie")
+        var defFormation = DefinitionBuilder.Definir("formation-securite")
+            .Intitule("Formation sécurité obligatoire")
+            .Commence("module-incendie")
             .Interactif("module-incendie", "Module incendie", n => n
                 .Tache("Compléter le module incendie")
                 .Vers("module-informatique"))
@@ -62,7 +59,7 @@ public static class SeedData
                 .Tache("Compléter le module informatique")
                 .Vers("delai-quiz"))
             .AttenteTemps("delai-quiz", "Délai avant quiz", n => n
-                .Echeance(DateTime.UtcNow.AddMinutes(5))
+                .EcheanceFixe(DateTime.UtcNow.AddMinutes(5))
                 .Vers("quiz-final"))
             .Metier("quiz-final", "Passer quiz final")
             .Build();

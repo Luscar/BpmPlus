@@ -939,6 +939,16 @@ public static class DefinitionProcessusExtensions
         => MermaidExporter.Generer(definition);
 }
 
+// ── Src : parameter source helpers ────────────────────────────────────────────
+
+/// <summary>Shortcuts for creating parameter sources.</summary>
+public static class Src
+{
+    public static ISourceParametre Var(string nom)      => new SourceVariable(nom);
+    public static ISourceParametre Val(object? valeur)  => new SourceValeurStatique(valeur);
+    public static ISourceParametre Query(string nom)    => new SourceQuery(nom);
+}
+
 // ── Internal utility ───────────────────────────────────────────────────────────
 
 internal static class V2Utils

@@ -16,8 +16,9 @@ public class ProcessusSignalTests : IDisposable
 
     private async Task<string> PublierProcessusSignalAsync(string cle, string nomSignal, bool avecSuite = true)
     {
-        var def = new ProcessusBuilder(cle, $"Processus signal {cle}")
-            .Debut("attente");
+        var def = DefinitionBuilder.Definir(cle)
+            .Intitule($"Processus signal {cle}")
+            .Commence("attente");
 
         if (avecSuite)
             def = def

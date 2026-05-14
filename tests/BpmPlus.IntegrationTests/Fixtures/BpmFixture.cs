@@ -69,8 +69,9 @@ public class BpmFixture : IDisposable
     /// </summary>
     public Task<DefinitionProcessus> PublierProcessusSimpleAsync(string cle = "processus-test")
     {
-        var def = new ProcessusBuilder(cle, "Processus de test")
-            .Debut("start")
+        var def = DefinitionBuilder.Definir(cle)
+            .Intitule("Processus de test")
+            .Commence("start")
             .Metier("start", "Démarrage", b => b.Commande("NoOpCommand").Vers("fin"))
             .Metier("fin", "Fin", b => b.Commande("NoOpCommand"))
             .Build();

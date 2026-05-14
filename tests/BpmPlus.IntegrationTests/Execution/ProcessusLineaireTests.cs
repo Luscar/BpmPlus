@@ -44,8 +44,9 @@ public class ProcessusLineaireTests : IDisposable
     public async Task Demarrer_DeuxFoisMemAgregate_LanceProcessusDejaActifException()
     {
         // Crée un processus qui se suspend pour permettre le double démarrage
-        var def = new ProcessusBuilder("p-double", "Double")
-            .Debut("tache")
+        var def = DefinitionBuilder.Definir("p-double")
+            .Intitule("Double")
+            .Commence("tache")
             .Interactif("tache", b => b.Tache("Attente").Vers("fin"))
             .Metier("fin")
             .Build();
@@ -67,11 +68,12 @@ public class ProcessusLineaireTests : IDisposable
     [Fact]
     public async Task Demarrer_ProcessusAvecDecision_RoutageSelonVariable()
     {
-        var def = new ProcessusBuilder("p-decision", "Décision")
-            .Debut("check")
+        var def = DefinitionBuilder.Definir("p-decision")
+            .Intitule("Décision")
+            .Commence("check")
             .Decision("check", d => d
-                .SiEgal("statut", "ok").Vers("fin-ok")
-                .Defaut().Vers("fin-ko"))
+                .SiVariable("statut").EstEgalA("ok").Aller("fin-ok")
+                .Sinon.Aller("fin-ko"))
             .Metier("fin-ok", b => b.Commande("NoOpCommand"))
             .Metier("fin-ko", b => b.Commande("NoOpCommand"))
             .Build();
