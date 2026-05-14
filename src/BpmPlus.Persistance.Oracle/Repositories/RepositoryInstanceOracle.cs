@@ -8,7 +8,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstance
 {
-    public RepositoryInstanceOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
+    public RepositoryInstanceOracle(Lazy<IDbConnection> connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -38,7 +38,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                  :IdNoeudCourant, :IdInstanceParent, :DateDebut, :DateFin,
                  :DateCreation, :DateMaj)
             RETURNING NO_SEQ_INSTC_PROCS INTO :NewId
-            """), dp);
+            """), dp, Tx);
 
         return dp.Get<long>("NewId");
     }
@@ -177,7 +177,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
                 NoeudCourant = idNoeudCourant,
                 DateFin = dateFin,
                 DateMaj = DateTime.UtcNow
-            });
+            }, Tx);
     }
 
     public async Task MettreAJourVersionAsync(

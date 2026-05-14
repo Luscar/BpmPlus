@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAttenteSignal
 {
-    public RepositoryAttenteSignalOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
+    public RepositoryAttenteSignalOracle(Lazy<IDbConnection> connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -25,7 +25,7 @@ public class RepositoryAttenteSignalOracle : OracleRepositoryBase, IRepositoryAt
     {
         await Cn.ExecuteAsync(OraParam($"""
             DELETE FROM {T("ATTEN_SIGNL")} WHERE NO_SEQ_INSTC_PROCS = :IdInstance
-            """), new { IdInstance = idInstance });
+            """), new { IdInstance = idInstance }, Tx);
     }
 
     public async Task<IReadOnlyList<long>> ObtenirInstancesEnAttenteAsync(

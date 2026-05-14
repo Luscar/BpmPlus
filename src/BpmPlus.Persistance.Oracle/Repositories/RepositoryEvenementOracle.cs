@@ -7,7 +7,7 @@ namespace BpmPlus.Persistance.Oracle.Repositories;
 
 public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenement
 {
-    public RepositoryEvenementOracle(IDbConnection connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
+    public RepositoryEvenementOracle(Lazy<IDbConnection> connection, string prefixe, IDbTransaction? tx = null) : base(connection, prefixe, tx) { }
 
     public Task CreerTablesAsync(IDbConnection connection) => Task.CompletedTask;
 
@@ -30,7 +30,7 @@ public class RepositoryEvenementOracle : OracleRepositoryBase, IRepositoryEvenem
                 evenement.DureeMs,
                 Resultat = evenement.Resultat?.ToString(),
                 evenement.Detail
-            });
+            }, Tx);
     }
 
     public async Task<IReadOnlyList<EvenementInstance>> ObtenirParInstanceAsync(
