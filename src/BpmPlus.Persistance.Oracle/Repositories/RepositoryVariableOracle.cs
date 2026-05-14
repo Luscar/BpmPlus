@@ -39,7 +39,7 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
-            variables[(string)row.NOM_VAR] = DeserialiserValeur((string)row.TYP_VAR, (string)row.VAL_VAR);
+            variables[(string)row.NOM_VAR] = DeserialiserValeur((string)row.TYP_VAR, (string?)row.VAL_VAR);
 
         return variables;
     }
@@ -63,9 +63,9 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
             Tx);
     }
 
-    private static (string type, string valeur) SerialiserValeur(object? valeur)
+    private static (string type, string? valeur) SerialiserValeur(object? valeur)
     {
-        if (valeur is null) return ("Null", "NULL");
+        if (valeur is null) return ("Null", null);
         return valeur switch
         {
             bool b => ("Bool", b.ToString()),
@@ -78,8 +78,9 @@ public class RepositoryVariableOracle : OracleRepositoryBase, IRepositoryVariabl
         };
     }
 
-    private static object? DeserialiserValeur(string type, string valeur)
+    private static object? DeserialiserValeur(string type, string? valeur)
     {
+        if (valeur is null) return null;
         return type switch
         {
             "Null" => null,

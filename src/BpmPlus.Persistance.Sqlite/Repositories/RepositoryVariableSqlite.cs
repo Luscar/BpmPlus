@@ -17,7 +17,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
                 ID_INSTANCE INTEGER NOT NULL,
                 NOM         TEXT    NOT NULL,
                 TYPE        TEXT    NOT NULL,
-                VALEUR      TEXT    NOT NULL,
+                VALEUR      TEXT,
                 UNIQUE(ID_INSTANCE, NOM)
             )
             """);
@@ -51,7 +51,7 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
 
         var variables = new Dictionary<string, object?>();
         foreach (var row in rows)
-            variables[(string)row.NOM] = DeserialiserValeur((string)row.TYPE, (string)row.VALEUR);
+            variables[(string)row.NOM] = DeserialiserValeur((string)row.TYPE, (string?)row.VALEUR);
 
         return variables;
     }
@@ -70,9 +70,9 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
             Tx);
     }
 
-    private static (string type, string valeur) SerialiserValeur(object? valeur)
+    private static (string type, string? valeur) SerialiserValeur(object? valeur)
     {
-        if (valeur is null) return ("Null", string.Empty);
+        if (valeur is null) return ("Null", null);
         return valeur switch
         {
             bool b => ("Bool", b.ToString()),
@@ -85,8 +85,9 @@ public class RepositoryVariableSqlite : SqliteRepositoryBase, IRepositoryVariabl
         };
     }
 
-    private static object? DeserialiserValeur(string type, string valeur)
+    private static object? DeserialiserValeur(string type, string? valeur)
     {
+        if (valeur is null) return null;
         return type switch
         {
             "Null" => null,
