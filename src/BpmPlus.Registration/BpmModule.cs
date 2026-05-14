@@ -95,6 +95,14 @@ public class BpmModule : Autofac.Module
 
     private void RegisterPersistance(ContainerBuilder builder)
     {
+        // Si le client enregistre une IDbConnectionFactory (au lieu d'une IDbConnection
+        // déjà ouverte), on l'utilise pour ouvrir la connexion à la demande — c'est-à-dire
+        // à l'intérieur du TransactionScope ambiant du client, ce qui garantit l'enrôlement.
+        builder.Register(ctx => ctx.Resolve<IDbConnectionFactory>().CreateOpenConnection())
+            .As<IDbConnection>()
+            .InstancePerLifetimeScope()
+            .IfNotRegistered(typeof(IDbConnection));
+
         var prefixe = _config.Prefixe;
 
         switch (_config.Backend)
