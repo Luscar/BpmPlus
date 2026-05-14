@@ -127,10 +127,10 @@ await ExecuterScenario(container, BaseDeDonnees,
 Console.WriteLine();
 AfficherBanniere("Exemple terminé — inspectez bpm_exemple.db pour les données persistées");
 
-// ── Bonus : démonstration du ProcessusV2Builder ───────────────────────────────
+// ── Bonus : démonstration du DefinitionBuilder ────────────────────────────────
 
-AfficherSection("Bonus", "ProcessusV2Builder — phases, DSL enrichi, export Mermaid");
-ExempleProcessusV2.AfficherDemo();
+AfficherSection("Bonus", "DefinitionBuilder — phases, DSL enrichi, export Mermaid");
+ExempleDefinitionBuilder.AfficherDemo();
 
 // ── Fonctions ─────────────────────────────────────────────────────────────────
 
