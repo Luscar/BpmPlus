@@ -11,12 +11,12 @@ namespace BpmPlus.UnitTests.Execution;
 
 public class ExecuteurNoeudMetierTests
 {
-    private ILifetimeScope BuildScope(IBpmHandlerCommande handler)
+    private ILifetimeScope BuildScope(IBpmHandlerCommande handler, string nomCommande)
     {
         var builder = new ContainerBuilder();
         builder.RegisterInstance(handler)
             .As<IBpmHandlerCommande>()
-            .Keyed<IBpmHandlerCommande>(handler.NomCommande);
+            .Keyed<IBpmHandlerCommande>(nomCommande);
         return builder.Build().BeginLifetimeScope();
     }
 
@@ -27,14 +27,13 @@ public class ExecuteurNoeudMetierTests
     public async Task Executer_NoeudAvecFluxSortant_RetourneNoeudSuivant()
     {
         var handlerMock = new Mock<IBpmHandlerCommande>();
-        handlerMock.Setup(h => h.NomCommande).Returns("ValiderCommand");
         handlerMock.Setup(h => h.ExecuterAsync(
             It.IsAny<long>(), It.IsAny<long?>(),
             It.IsAny<IReadOnlyDictionary<string, object?>>(),
             It.IsAny<IContexteExecution>()))
             .Returns(Task.CompletedTask);
 
-        var scope = BuildScope(handlerMock.Object);
+        var scope = BuildScope(handlerMock.Object, "ValiderCommand");
         var resolveur = new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
         var executeur = new ExecuteurNoeudMetier(scope, resolveur, NullLogger<ExecuteurNoeudMetier>.Instance);
 
@@ -60,14 +59,13 @@ public class ExecuteurNoeudMetierTests
     public async Task Executer_NoeudFinal_RetourneTermine()
     {
         var handlerMock = new Mock<IBpmHandlerCommande>();
-        handlerMock.Setup(h => h.NomCommande).Returns("FinCommand");
         handlerMock.Setup(h => h.ExecuterAsync(
             It.IsAny<long>(), It.IsAny<long?>(),
             It.IsAny<IReadOnlyDictionary<string, object?>>(),
             It.IsAny<IContexteExecution>()))
             .Returns(Task.CompletedTask);
 
-        var scope = BuildScope(handlerMock.Object);
+        var scope = BuildScope(handlerMock.Object, "FinCommand");
         var resolveur = new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
         var executeur = new ExecuteurNoeudMetier(scope, resolveur, NullLogger<ExecuteurNoeudMetier>.Instance);
 
@@ -91,7 +89,6 @@ public class ExecuteurNoeudMetierTests
         object? parametresRecus = null;
 
         var handlerMock = new Mock<IBpmHandlerCommande>();
-        handlerMock.Setup(h => h.NomCommande).Returns("TestCommand");
         handlerMock.Setup(h => h.ExecuterAsync(
             It.IsAny<long>(), It.IsAny<long?>(),
             It.IsAny<IReadOnlyDictionary<string, object?>>(),
@@ -100,7 +97,7 @@ public class ExecuteurNoeudMetierTests
                 (_, _, p, _) => parametresRecus = p)
             .Returns(Task.CompletedTask);
 
-        var scope = BuildScope(handlerMock.Object);
+        var scope = BuildScope(handlerMock.Object, "TestCommand");
         var resolveur = new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
         var executeur = new ExecuteurNoeudMetier(scope, resolveur, NullLogger<ExecuteurNoeudMetier>.Instance);
 

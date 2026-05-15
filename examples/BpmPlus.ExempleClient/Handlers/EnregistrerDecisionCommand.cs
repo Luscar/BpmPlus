@@ -2,10 +2,9 @@ using BpmPlus.Abstractions;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
+[BpmCommande("EnregistrerDecisionCommand")]
 public class EnregistrerDecisionHandler : IBpmHandlerCommande
 {
-    public string NomCommande => "EnregistrerDecisionCommand";
-
     public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,

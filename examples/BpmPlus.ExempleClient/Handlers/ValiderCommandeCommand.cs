@@ -2,10 +2,9 @@ using BpmPlus.Abstractions;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
+[BpmCommande("ValiderCommandeCommand")]
 public class ValiderCommandeHandler : IBpmHandlerCommande
 {
-    public string NomCommande => "ValiderCommandeCommand";
-
     public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,

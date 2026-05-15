@@ -201,37 +201,11 @@ public class BpmModule : Autofac.Module
         }
     }
 
-    private static string? GetNomCommande(Type type)
-    {
-        try
-        {
-            var prop = type.GetProperty("NomCommande");
-            if (prop is null) return null;
+    private static string? GetNomCommande(Type type) =>
+        type.GetCustomAttribute<BpmCommandeAttribute>()?.Nom;
 
-            var instance = Activator.CreateInstance(type);
-            return instance is null ? null : (string?)prop.GetValue(instance);
-        }
-        catch
-        {
-            return type.Name;
-        }
-    }
-
-    private static string? GetNomQuery(Type type)
-    {
-        try
-        {
-            var prop = type.GetProperty("NomQuery");
-            if (prop is null) return null;
-
-            var instance = Activator.CreateInstance(type);
-            return instance is null ? null : (string?)prop.GetValue(instance);
-        }
-        catch
-        {
-            return type.Name;
-        }
-    }
+    private static string? GetNomQuery(Type type) =>
+        type.GetCustomAttribute<BpmQueryAttribute>()?.Nom;
 }
 
 /// <summary>

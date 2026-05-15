@@ -2,10 +2,9 @@ using BpmPlus.Abstractions;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
+[BpmCommande("NotificationApprobationCommand")]
 public class NotificationApprobationHandler : IBpmHandlerCommande
 {
-    public string NomCommande => "NotificationApprobationCommand";
-
     public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,

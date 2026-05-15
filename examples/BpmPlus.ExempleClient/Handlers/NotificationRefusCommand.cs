@@ -2,10 +2,9 @@ using BpmPlus.Abstractions;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
+[BpmCommande("NotificationRefusCommand")]
 public class NotificationRefusHandler : IBpmHandlerCommande
 {
-    public string NomCommande => "NotificationRefusCommand";
-
     public Task ExecuterAsync(
         long idInstance,
         long? aggregateId,

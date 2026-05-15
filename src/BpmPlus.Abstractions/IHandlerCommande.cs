@@ -1,12 +1,10 @@
 namespace BpmPlus.Abstractions;
 
 /// <summary>
-/// Handler d'une commande BPM. Découvert automatiquement via NomCommande.
+/// Handler d'une commande BPM. Décoré avec [BpmCommande("...")] pour la découverte automatique.
 /// </summary>
 public interface IBpmHandlerCommande
 {
-    string NomCommande { get; }
-
     Task ExecuterAsync(
         long idInstance,
         long? aggregateId,
