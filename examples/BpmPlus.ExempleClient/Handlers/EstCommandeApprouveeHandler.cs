@@ -2,10 +2,9 @@ using BpmPlus.Abstractions;
 
 namespace BpmPlus.ExempleClient.Handlers;
 
+[BpmQuery("EstCommandeApprouveeQuery")]
 public class EstCommandeApprouveeHandler : IBpmHandlerQuery<bool>
 {
-    public string NomQuery => "EstCommandeApprouveeQuery";
-
     public Task<bool> ExecuterAsync(
         long idInstance,
         long? aggregateId,
