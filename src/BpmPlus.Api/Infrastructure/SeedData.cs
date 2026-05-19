@@ -16,8 +16,8 @@ public static class SeedData
             .Commence("valider-commande")
             .Metier("valider-commande", "Valider la commande", "approbation-responsable")
             .Interactif("approbation-responsable", "Approbation responsable", n => n
-                .Tache("Approuver la commande",
-                    "Vérifiez et approuvez ou refusez la commande d'achat.")
+                .Titre("Approuver la commande")
+                .Description("Vérifiez et approuvez ou refusez la commande d'achat.")
                 .Vers("decision-approbation"))
             .Decision("decision-approbation", "Décision", n => n
                 .SiVariable("approuve").EstEgalA(true).Aller("notification-approbation")
@@ -35,8 +35,8 @@ public static class SeedData
             .Commence("creer-compte")
             .Metier("creer-compte", "Créer compte employé", "configurer-acces")
             .Interactif("configurer-acces", "Configuration des accès", n => n
-                .Tache("Configurer les droits d'accès",
-                    "Définir les rôles et permissions du nouvel employé.")
+                .Titre("Configurer les droits d'accès")
+                .Description("Définir les rôles et permissions du nouvel employé.")
                 .Vers("attendre-badge"))
             .AttenteSignal("attendre-badge", "Attente badge physique", "badge-livre", "formation-obligatoire")
             .SousProcessus("formation-obligatoire", "Formation obligatoire", n => n
@@ -53,10 +53,10 @@ public static class SeedData
             .Intitule("Formation sécurité obligatoire")
             .Commence("module-incendie")
             .Interactif("module-incendie", "Module incendie", n => n
-                .Tache("Compléter le module incendie")
+                .Titre("Compléter le module incendie")
                 .Vers("module-informatique"))
             .Interactif("module-informatique", "Module informatique", n => n
-                .Tache("Compléter le module informatique")
+                .Titre("Compléter le module informatique")
                 .Vers("delai-quiz"))
             .AttenteTemps("delai-quiz", "Délai avant quiz", n => n
                 .EcheanceFixe(DateTime.UtcNow.AddMinutes(5))

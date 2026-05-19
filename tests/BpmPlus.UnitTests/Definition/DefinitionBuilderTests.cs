@@ -148,7 +148,7 @@ public class DefinitionBuilderTests
     {
         var def = DefinitionBuilder.Definir("p")
             .Commence("tache")
-            .Interactif("tache", ib => ib.Tache("Valider le dossier").Vers("fin"))
+            .Interactif("tache", ib => ib.Titre("Valider le dossier").Vers("fin"))
             .Metier("fin")
             .Build();
 

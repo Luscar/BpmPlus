@@ -47,7 +47,7 @@ public class ProcessusLineaireTests : IDisposable
         var def = DefinitionBuilder.Definir("p-double")
             .Intitule("Double")
             .Commence("tache")
-            .Interactif("tache", b => b.Tache("Attente").Vers("fin"))
+            .Interactif("tache", b => b.Titre("Attente").Vers("fin"))
             .Metier("fin")
             .Build();
         await _fixture.PublierDefinitionAsync(def);
