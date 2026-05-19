@@ -115,7 +115,7 @@ public class ProcessusSousProcessusTests : IDisposable
         var enfant = DefinitionBuilder.Definir("sp-enfant-5")
             .Intitule("Enfant interactif")
             .Commence("attente")
-            .Interactif("attente", b => b.Tache("Valider").Vers("fin"))
+            .Interactif("attente", b => b.Titre("Valider").Vers("fin"))
             .Metier("fin")
             .Build();
         await _fixture.PublierDefinitionAsync(enfant);

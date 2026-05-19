@@ -74,7 +74,8 @@ var definition = DefinitionBuilder.Definir("approbation-commande")
     // Suspension : crée une tâche pour le responsable via IGestionTache
     // La CommandePost est exécutée dans la même transaction que la reprise
     .Interactif("approbation-responsable", "Approbation responsable", n => n
-        .Tache("Approuver la commande", "Veuillez approuver ou refuser la commande")
+        .Titre("Approuver la commande")
+        .Description("Veuillez approuver ou refuser la commande")
         .AuRetour("EnregistrerDecisionCommand")
         .Vers("decision-approbation"))
 

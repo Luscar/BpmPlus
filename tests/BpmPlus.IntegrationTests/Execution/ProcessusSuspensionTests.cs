@@ -20,7 +20,7 @@ public class ProcessusSuspensionTests : IDisposable
             .Intitule("Processus interactif")
             .Commence("debut")
             .Metier("debut", "Initialisation", b => b.Commande("NoOpCommand").Vers("tache"))
-            .Interactif("tache", b => b.Tache("Valider le dossier").Vers("fin"))
+            .Interactif("tache", b => b.Titre("Valider le dossier").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
             .Build();
         await _fixture.PublierDefinitionAsync(def);
@@ -61,7 +61,7 @@ public class ProcessusSuspensionTests : IDisposable
         var def = DefinitionBuilder.Definir("p-actif")
             .Intitule("Actif")
             .Commence("debut")
-            .Interactif("debut", b => b.Tache("T").Vers("fin"))
+            .Interactif("debut", b => b.Titre("T").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
             .Build();
         await _fixture.PublierDefinitionAsync(def);
@@ -122,8 +122,8 @@ public class ProcessusSuspensionTests : IDisposable
         var def = DefinitionBuilder.Definir("p-deux-taches")
             .Intitule("Deux tâches")
             .Commence("tache1")
-            .Interactif("tache1", b => b.Tache("Première tâche").Vers("tache2"))
-            .Interactif("tache2", b => b.Tache("Deuxième tâche").Vers("fin"))
+            .Interactif("tache1", b => b.Titre("Première tâche").Vers("tache2"))
+            .Interactif("tache2", b => b.Titre("Deuxième tâche").Vers("fin"))
             .Metier("fin", b => b.Commande("NoOpCommand"))
             .Build();
         await _fixture.PublierDefinitionAsync(def);

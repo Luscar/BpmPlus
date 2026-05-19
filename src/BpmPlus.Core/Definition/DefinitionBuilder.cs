@@ -11,7 +11,7 @@ namespace BpmPlus.Core.Definition;
 //  • Complex definitions stay readable: phases group related nodes visually.
 //  • Every parameter is tweakable: nothing is hidden behind implicit defaults.
 //  • Rich condition DSL: SiVariable("x").EstEgalA("y").Aller("node")
-//  • Rich task DSL:      TacheHumaine(t => t.Titre("…").Role("…").AssignerA("…"))
+//  • Rich task DSL:      .Titre("…").Role("…").AssignerA("…").TypeTache("…")
 //  • Approval pattern:   PatternApprobation(…) wires 2 nodes automatically.
 //  • Strict build:       BuildStrict() catches dead-ends and dangling refs.
 //  • Mermaid export:     Build(out string mermaid) — works on any definition.
@@ -202,7 +202,7 @@ public sealed class DefinitionBuilder
         string versRefuse)
     {
         Interactif(idTache, intituleTache, n => n
-            .TacheHumaine(t => t.Titre(intituleTache))
+            .Titre(intituleTache)
             .AuRetour(commandeDecision)
             .Puis(idDecision));
 
@@ -469,30 +469,13 @@ public sealed class InteractifV2Builder
 
     // ── Task configuration ────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Configures the human task via a rich sub-builder with all task properties
-    /// accessible in a single, discoverable fluent chain.
-    /// </summary>
-    public InteractifV2Builder TacheHumaine(Action<TacheV2Builder> configure)
-    {
-        var b = new TacheV2Builder();
-        configure(b);
-        _tache = b.Build();
-        return this;
-    }
-
-    // ── Shortcut: title + optional description (v1 parity) ───────────────────
-
-    public InteractifV2Builder Tache(string titre, string? description = null)
-    {
-        _tache = new DefinitionTache { Titre = titre, Description = description };
-        return this;
-    }
-
-    // ── Inline task shortcuts (no sub-builder needed for simple cases) ────────
-
-    public InteractifV2Builder Role(string codeRole)      { _tache.CodeRole  = codeRole; return this; }
-    public InteractifV2Builder AssignerA(string logon)    { _tache.LogonAuto = logon;    return this; }
+    public InteractifV2Builder Titre(string titre)                { _tache.Titre            = titre;       return this; }
+    public InteractifV2Builder Description(string description)    { _tache.Description      = description; return this; }
+    public InteractifV2Builder Role(string codeRole)              { _tache.CodeRole         = codeRole;    return this; }
+    public InteractifV2Builder AssignerA(string logon)            { _tache.LogonAuto        = logon;       return this; }
+    public InteractifV2Builder TypeTache(string codeTache)        { _tache.CodeTache        = codeTache;   return this; }
+    public InteractifV2Builder EstUneRevision(bool valeur = true) { _tache.IndTacheRevision = valeur;      return this; }
+    public InteractifV2Builder LogonAuteur(string logon)          { _tache.LogonAuteur      = logon;       return this; }
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
@@ -540,40 +523,6 @@ public sealed class InteractifV2Builder
             CommandePost    = _commandePost
         };
     }
-}
-
-// ── TacheV2Builder ─────────────────────────────────────────────────────────────
-
-/// <summary>
-/// Rich sub-builder for human task configuration. Groups all task properties
-/// together so they're discoverable in one place.
-/// </summary>
-public sealed class TacheV2Builder
-{
-    private readonly DefinitionTache _tache = new();
-
-    /// <summary>Title shown to the task assignee.</summary>
-    public TacheV2Builder Titre(string titre)              { _tache.Titre            = titre;     return this; }
-
-    /// <summary>Detailed description or instructions for the task.</summary>
-    public TacheV2Builder Description(string description)  { _tache.Description      = description; return this; }
-
-    /// <summary>Role code required to execute this task (e.g. "RESPONSABLE").</summary>
-    public TacheV2Builder Role(string codeRole)            { _tache.CodeRole         = codeRole;  return this; }
-
-    /// <summary>Auto-assigns the task to this specific user.</summary>
-    public TacheV2Builder AssignerA(string logon)          { _tache.LogonAuto        = logon;     return this; }
-
-    /// <summary>External task-type code for integration with the task management system.</summary>
-    public TacheV2Builder TypeTache(string codeTache)      { _tache.CodeTache        = codeTache; return this; }
-
-    /// <summary>Marks this as a revision task (IndTacheRevision = true).</summary>
-    public TacheV2Builder EstUneRevision(bool valeur = true) { _tache.IndTacheRevision = valeur;  return this; }
-
-    /// <summary>Logon of the author of the item being reviewed.</summary>
-    public TacheV2Builder LogonAuteur(string logon)        { _tache.LogonAuteur      = logon;     return this; }
-
-    internal DefinitionTache Build() => _tache;
 }
 
 // ── CommandeV2Builder ──────────────────────────────────────────────────────────

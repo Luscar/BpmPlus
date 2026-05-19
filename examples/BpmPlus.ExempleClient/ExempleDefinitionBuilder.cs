@@ -11,7 +11,7 @@ namespace BpmPlus.ExempleClient;
 //
 //    • Phase grouping            — organises nodes by logical stage
 //    • Fluent condition DSL      — SiVariable("x").EstEgalA("y").Aller("n")
-//    • Rich task sub-builder     — TacheHumaine(t => t.Titre(…).Role(…))
+//    • Flat task DSL             — .Titre(…).Role(…).TypeTache(…).EstUneRevision()
 //    • PatternApprobation helper — wires an interactive + decision in one call
 //    • EcheanceQuery on waits    — deadline resolved by a runtime query
 //    • BuildStrict()             — validates dead-ends and orphan nodes
@@ -103,13 +103,10 @@ public static class ExempleDefinitionBuilder
             // ═══ Phase 2 : Approbation responsable ════════════════════════════
             .Phase("Approbation hiérarchique", phase => phase
 
-                // Rich task sub-builder — all task properties in one discoverable block
                 .Interactif("approbation-responsable", "Approbation du responsable", n => n
-                    .TacheHumaine(t => t
-                        .Titre("Valider la demande d'achat")
-                        .Description(
-                            "Vérifiez les justificatifs et les devis avant de valider.")
-                        .Role("RESPONSABLE_ACHAT"))
+                    .Titre("Valider la demande d'achat")
+                    .Description("Vérifiez les justificatifs et les devis avant de valider.")
+                    .Role("RESPONSABLE_ACHAT")
                     .AuRetour("EnregistrerDecisionResponsableCommand")
                     .Puis("decision-responsable"))
 
@@ -124,12 +121,10 @@ public static class ExempleDefinitionBuilder
 
                 // High-value orders also require a director sign-off
                 .Interactif("approbation-directeur", "Approbation du directeur", n => n
-                    .TacheHumaine(t => t
-                        .Titre("Valider la demande d'achat (montant élevé)")
-                        .Description(
-                            "Cette demande dépasse 50 000 € et nécessite votre approbation.")
-                        .Role("DIRECTEUR")
-                        .EstUneRevision())
+                    .Titre("Valider la demande d'achat (montant élevé)")
+                    .Description("Cette demande dépasse 50 000 € et nécessite votre approbation.")
+                    .Role("DIRECTEUR")
+                    .EstUneRevision()
                     .AuRetour("EnregistrerDecisionDirecteurCommand")
                     .Puis("decision-directeur"))
 
@@ -157,10 +152,9 @@ public static class ExempleDefinitionBuilder
                     vers: "confirmer-reception")
 
                 .Interactif("confirmer-reception", "Confirmation de réception", n => n
-                    .TacheHumaine(t => t
-                        .Titre("Confirmer la réception des marchandises")
-                        .Role("MAGASINIER")
-                        .Description("Vérifiez la conformité de la livraison avant de valider."))
+                    .Titre("Confirmer la réception des marchandises")
+                    .Description("Vérifiez la conformité de la livraison avant de valider.")
+                    .Role("MAGASINIER")
                     .AuRetour("ConfirmerReceptionCommand")
                     .Puis("decision-reception"))
 
@@ -169,10 +163,9 @@ public static class ExempleDefinitionBuilder
                     .Sinon.Aller("litige-livraison"))
 
                 .Interactif("litige-livraison", "Gestion d'un litige livraison", n => n
-                    .TacheHumaine(t => t
-                        .Titre("Traiter le litige de livraison")
-                        .Role("RESPONSABLE_ACHAT")
-                        .Description("La livraison n'est pas conforme. Contactez le fournisseur."))
+                    .Titre("Traiter le litige de livraison")
+                    .Description("La livraison n'est pas conforme. Contactez le fournisseur.")
+                    .Role("RESPONSABLE_ACHAT")
                     .AuRetour("EnregistrerResolutionLitigeCommand")
                     .Puis("cloturer-achat")))
 
