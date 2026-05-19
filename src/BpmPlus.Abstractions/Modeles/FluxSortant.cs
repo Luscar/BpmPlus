@@ -12,4 +12,7 @@ public class FluxSortant
 
     [JsonPropertyName("estParDefaut")]
     public bool EstParDefaut { get; set; }
+
+    [JsonPropertyName("estTerminal")]
+    public bool EstTerminal { get; set; }
 }

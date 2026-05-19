@@ -667,6 +667,9 @@ public sealed class FluxV2Builder
 
     /// <summary>Same as <see cref="Aller"/> — familiar alias for v1 users.</summary>
     public DecisionV2Builder Vers(string id)  { _flux.Vers = id; return _parent; }
+
+    /// <summary>Terminates the process when this branch is taken, without routing to another node.</summary>
+    public DecisionV2Builder Terminer() { _flux.EstTerminal = true; return _parent; }
 }
 
 // ── AttenteTempsV2Builder ──────────────────────────────────────────────────────
