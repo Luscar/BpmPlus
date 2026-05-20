@@ -5,7 +5,7 @@ public class DefinitionTache
     public string Titre { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Categorie { get; set; }
-    public string? LogonAuto { get; set; }
+    public ISourceParametre? SourceLogonAuto { get; set; }
 
     /// <summary>Code de rôle requis pour cette tâche (ex. "RESPONSABLE", "VALIDATEUR").</summary>
     public string? CodeRole { get; set; }

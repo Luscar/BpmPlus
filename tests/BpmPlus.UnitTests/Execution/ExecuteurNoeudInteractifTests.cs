@@ -25,10 +25,13 @@ public class ExecuteurNoeudInteractifTests
             new AccesseurVariables(new Dictionary<string, object?>()),
             CancellationToken.None);
 
+    private static ResolveurParametre BuildResolveur(ILifetimeScope scope) =>
+        new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
+
     private static ExecuteurNoeudMetier BuildExecuteurMetier(ILifetimeScope scope) =>
         new ExecuteurNoeudMetier(
             scope,
-            new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance),
+            BuildResolveur(scope),
             NullLogger<ExecuteurNoeudMetier>.Instance);
 
     [Fact]
@@ -37,7 +40,7 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeurMetier = BuildExecuteurMetier(scope);
         var executeur = new ExecuteurNoeudInteractif(executeurMetier, null,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
@@ -64,7 +67,7 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeurMetier = BuildExecuteurMetier(scope);
         var executeur = new ExecuteurNoeudInteractif(executeurMetier, gestionMock.Object,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
@@ -94,12 +97,12 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeur = new ExecuteurNoeudInteractif(
             BuildExecuteurMetier(scope), gestionMock.Object,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
             Id = "tache-auto",
-            DefinitionTache = new DefinitionTache { Titre = "Tâche auto", LogonAuto = "john.doe" },
+            DefinitionTache = new DefinitionTache { Titre = "Tâche auto", SourceLogonAuto = new SourceValeurStatique("john.doe") },
             FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
         };
 
@@ -115,7 +118,7 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeur = new ExecuteurNoeudInteractif(
             BuildExecuteurMetier(scope), null,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
@@ -137,7 +140,7 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeur = new ExecuteurNoeudInteractif(
             BuildExecuteurMetier(scope), null,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
@@ -166,7 +169,7 @@ public class ExecuteurNoeudInteractifTests
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
         var executeur = new ExecuteurNoeudInteractif(
             BuildExecuteurMetier(scope), gestionMock.Object,
-            NullLogger<ExecuteurNoeudInteractif>.Instance);
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
 
         var noeud = new NoeudInteractif
         {
@@ -181,5 +184,38 @@ public class ExecuteurNoeudInteractifTests
             It.IsAny<InstanceProcessus>(),
             It.IsAny<IReadOnlyDictionary<string, object?>>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Entrer_AvecLogonDepuisVariable_AssigneLeLogonResolue()
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        gestionMock.Setup(g => g.AssignerTacheAsync(
+            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-var",
+            DefinitionTache = new DefinitionTache { Titre = "Tâche variable", SourceLogonAuto = new SourceVariable("responsable") },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var contexte = new ContexteExecution(7, "test", 1, null,
+            new AccesseurVariables(new Dictionary<string, object?> { ["responsable"] = "marie.dupont" }),
+            CancellationToken.None);
+
+        await executeur.EntrerAsync(noeud, InstanceTest(7), contexte, CancellationToken.None);
+
+        gestionMock.Verify(g => g.AssignerTacheAsync(7L, "marie.dupont", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

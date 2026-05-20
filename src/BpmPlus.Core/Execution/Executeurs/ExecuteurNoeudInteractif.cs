@@ -7,15 +7,18 @@ public class ExecuteurNoeudInteractif
 {
     private readonly ExecuteurNoeudMetier _executeurCommande;
     private readonly IGestionTache? _gestionTache;
+    private readonly ResolveurParametre _resolveur;
     private readonly ILogger<ExecuteurNoeudInteractif> _logger;
 
     public ExecuteurNoeudInteractif(
         ExecuteurNoeudMetier executeurCommande,
         IGestionTache? gestionTache,
+        ResolveurParametre resolveur,
         ILogger<ExecuteurNoeudInteractif> logger)
     {
         _executeurCommande = executeurCommande;
         _gestionTache = gestionTache;
+        _resolveur = resolveur;
         _logger = logger;
     }
 
@@ -41,11 +44,14 @@ public class ExecuteurNoeudInteractif
             await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
             _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée pour instance {IdInstance}", noeud.Id, instance.Id);
 
-            if (noeud.DefinitionTache.LogonAuto is not null)
+            if (noeud.DefinitionTache.SourceLogonAuto is not null)
             {
-                await _gestionTache.AssignerTacheAsync(instance.Id, noeud.DefinitionTache.LogonAuto, ct);
-                logon = noeud.DefinitionTache.LogonAuto;
-                _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
+                logon = (await _resolveur.ResolveAsync(noeud.DefinitionTache.SourceLogonAuto, contexte, ct))?.ToString();
+                if (logon is not null)
+                {
+                    await _gestionTache.AssignerTacheAsync(instance.Id, logon, ct);
+                    _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
+                }
             }
         }
 
