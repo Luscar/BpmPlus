@@ -96,6 +96,29 @@ public class DefinitionBuilderTests
     }
 
     [Fact]
+    public void SrcVal_AvecISourceParametre_RetourneSourceSansDoublerEnveloppe()
+    {
+        var sourceExistante = new SourceValeurStatique("DECLARATION_RECU");
+        var result = Src.Val(sourceExistante);
+
+        result.Should().BeSameAs(sourceExistante);
+    }
+
+    [Fact]
+    public void ParamFixe_AvecSrcValCommeValeur_NeCreesPasDoubleEnveloppe()
+    {
+        var def = DefinitionBuilder.Definir("p")
+            .Commence("n")
+            .Metier("n", b => b.ParamFixe("TypeEvenement", Src.Val("DECLARATION_RECU")))
+            .Build();
+
+        var noeud = def.Noeuds.OfType<NoeudMetier>().First();
+        var param = noeud.Parametres["TypeEvenement"].Should().BeOfType<SourceValeurStatique>().Subject;
+        param.Valeur.Should().Be("DECLARATION_RECU");
+        param.Valeur.Should().NotBeOfType<SourceValeurStatique>();
+    }
+
+    [Fact]
     public void Decision_AvecConditionEtDefaut_CreesFluxCorrects()
     {
         var def = DefinitionBuilder.Definir("p")

@@ -125,6 +125,45 @@ public class ExecuteurNoeudMetierTests
     }
 
     [Fact]
+    public async Task Executer_ParametreStatiqueDoubleEnveloppe_DesenveloppeLaValeur()
+    {
+        // Simule le cas où le JSON stocké contient une double-enveloppe :
+        // {"type":"Statique","valeur":{"type":"Statique","valeur":"DECLARATION_RECU"}}
+        object? parametresRecus = null;
+
+        var handlerMock = new Mock<IBpmHandlerCommande>();
+        handlerMock.Setup(h => h.ExecuterAsync(
+            It.IsAny<long>(), It.IsAny<long?>(),
+            It.IsAny<IReadOnlyDictionary<string, object?>>(),
+            It.IsAny<IContexteExecution>()))
+            .Callback<long, long?, IReadOnlyDictionary<string, object?>, IContexteExecution>(
+                (_, _, p, _) => parametresRecus = p)
+            .Returns(Task.CompletedTask);
+
+        var scope = BuildScope(handlerMock.Object, "TestCommand");
+        var resolveur = new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
+        var executeur = new ExecuteurNoeudMetier(scope, resolveur, NullLogger<ExecuteurNoeudMetier>.Instance);
+
+        // Simule ce qui se passe après désérialisation d'un JSON double-enveloppé :
+        // Valeur est un ISourceParametre imbriqué (cas code C#)
+        var noeud = new NoeudMetier
+        {
+            Id = "test",
+            NomCommande = "TestCommand",
+            EstFinale = true,
+            Parametres = new Dictionary<string, ISourceParametre>
+            {
+                ["TypeEvenement"] = new SourceValeurStatique(new SourceValeurStatique("DECLARATION_RECU"))
+            }
+        };
+
+        await executeur.ExecuterAsync(noeud, ContexteVide(), CancellationToken.None);
+
+        var p = (IReadOnlyDictionary<string, object?>)parametresRecus!;
+        p["TypeEvenement"].Should().Be("DECLARATION_RECU");
+    }
+
+    [Fact]
     public async Task Executer_CommandeInconnue_LanceInvalidOperation()
     {
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();

@@ -897,7 +897,7 @@ public static class DefinitionProcessusExtensions
 public static class Src
 {
     public static ISourceParametre Var(string nom)      => new SourceVariable(nom);
-    public static ISourceParametre Val(object? valeur)  => new SourceValeurStatique(valeur);
+    public static ISourceParametre Val(object? valeur)  => valeur is ISourceParametre src ? src : new SourceValeurStatique(valeur);
     public static ISourceParametre Query(string nom)    => new SourceQuery(nom);
 }
 
