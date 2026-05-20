@@ -35,7 +35,7 @@ public class ExecuteurNoeudDecision
             if (resultat)
             {
                 _logger.LogInformation("Décision '{Id}' → branche '{Vers}'", noeud.Id, flux.Vers);
-                return new ResultatNoeud(TypeResultatNoeud.Suivant, flux.Vers);
+                return ResoudreFlux(noeud.Id, flux);
             }
         }
 
@@ -43,9 +43,19 @@ public class ExecuteurNoeudDecision
         {
             _logger.LogWarning("Décision '{Id}' → aucune condition vraie, branche par défaut '{Vers}'",
                 noeud.Id, brancheDefaut.Vers);
-            return new ResultatNoeud(TypeResultatNoeud.Suivant, brancheDefaut.Vers);
+            return ResoudreFlux(noeud.Id, brancheDefaut);
         }
 
         throw new AucunCheminException(noeud.Id);
+    }
+
+    private ResultatNoeud ResoudreFlux(string noeudId, FluxSortant flux)
+    {
+        if (flux.EstTerminal)
+        {
+            _logger.LogInformation("Décision '{Id}' → branche terminale, fin du processus", noeudId);
+            return new ResultatNoeud(TypeResultatNoeud.Termine, null);
+        }
+        return new ResultatNoeud(TypeResultatNoeud.Suivant, flux.Vers);
     }
 }

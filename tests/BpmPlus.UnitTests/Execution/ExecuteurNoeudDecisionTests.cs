@@ -141,6 +141,50 @@ public class ExecuteurNoeudDecisionTests
         resultat.NoeudSuivantId.Should().Be("excellent");
     }
 
+    [Fact]
+    public async Task Executer_BrancheTerminale_RetourneTermine()
+    {
+        var noeud = new NoeudDecision
+        {
+            Id = "decision",
+            FluxSortants = new List<FluxSortant>
+            {
+                new() { Condition = new ConditionVariable("statut", Operateur.Egal, "ok"), Vers = "suite" },
+                new() { EstParDefaut = true, EstTerminal = true }
+            }
+        };
+
+        var resultat = await _executeur.ExecuterAsync(
+            noeud,
+            ContexteAvec(new Dictionary<string, object?> { ["statut"] = "refuse" }),
+            CancellationToken.None);
+
+        resultat.Type.Should().Be(TypeResultatNoeud.Termine);
+        resultat.NoeudSuivantId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Executer_BrancheConditionnelleTerminale_RetourneTermine()
+    {
+        var noeud = new NoeudDecision
+        {
+            Id = "decision",
+            FluxSortants = new List<FluxSortant>
+            {
+                new() { Condition = new ConditionVariable("actif", Operateur.Egal, false), EstTerminal = true },
+                new() { EstParDefaut = true, Vers = "suite" }
+            }
+        };
+
+        var resultat = await _executeur.ExecuterAsync(
+            noeud,
+            ContexteAvec(new Dictionary<string, object?> { ["actif"] = false }),
+            CancellationToken.None);
+
+        resultat.Type.Should().Be(TypeResultatNoeud.Termine);
+        resultat.NoeudSuivantId.Should().BeNull();
+    }
+
     private static NoeudDecision NoeudDecisionAvec(FluxSortant flux, string defaut) =>
         new()
         {
