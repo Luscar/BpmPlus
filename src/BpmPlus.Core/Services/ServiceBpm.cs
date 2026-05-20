@@ -349,12 +349,23 @@ public class ServiceBpm : IServiceBpm
         return null;
     }
 
-    public async Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default)
+    public async Task AssignerTacheAsync(long idInstance, string logon, CancellationToken ct = default)
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 
         if (await EstSuspenduTacheInteractiveAsync(idInstance, ct))
             await _gestionTache.AssignerTacheAsync(idInstance, logon, ct);
+
+        if (instance.IdNoeudCourant is not null)
+        {
+            var definition = await ChargerDefinitionInstanceAsync(instance, ct);
+            var noeud = definition.Noeuds
+                .OfType<NoeudInteractif>()
+                .FirstOrDefault(n => n.Id == instance.IdNoeudCourant);
+
+            if (noeud?.DefinitionTache.SourceLogonAuto is SourceVariable sourceVar)
+                await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
+        }
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
@@ -367,6 +378,24 @@ public class ServiceBpm : IServiceBpm
         }, ct);
 
         _logger.LogInformation("Instance {IdInstance} — tâche assignée à '{Logon}'", idInstance, logon);
+    }
+
+    public async Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default)
+    {
+        var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
+
+        if (instance.IdNoeudCourant is null) return;
+
+        var definition = await ChargerDefinitionInstanceAsync(instance, ct);
+        var noeud = definition.Noeuds
+            .OfType<NoeudInteractif>()
+            .FirstOrDefault(n => n.Id == instance.IdNoeudCourant);
+
+        if (noeud?.DefinitionTache.SourceLogonAuto is not SourceVariable sourceVar) return;
+
+        await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
+        _logger.LogInformation("Instance {IdInstance} — variable logon '{Variable}' synchronisée à '{Logon}'",
+            idInstance, sourceVar.NomVariable, logon);
     }
 
     // ── Historique ────────────────────────────────────────────────────────────

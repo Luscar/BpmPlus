@@ -102,6 +102,11 @@ public interface IServiceBpm
         long idInstance,
         CancellationToken ct = default);
 
+    Task AssignerTacheAsync(
+        long idInstance,
+        string logon,
+        CancellationToken ct = default);
+
     Task AssignerLogonAsync(
         long idInstance,
         string logon,

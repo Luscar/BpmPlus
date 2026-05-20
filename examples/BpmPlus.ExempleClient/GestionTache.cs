@@ -21,7 +21,6 @@ public class GestionTache : IGestionTache
         Console.WriteLine($"  |                  NomNoeud         : {definitionTache.NomNoeud}");
         Console.WriteLine($"  |                  CodeRole         : {definitionTache.CodeRole}");
         Console.WriteLine($"  |                  CodeTache        : {definitionTache.CodeTache}");
-        Console.WriteLine($"  |                  IndTacheRevision : {definitionTache.IndTacheRevision}");
         Console.WriteLine($"  |                  LogonAuteur      : {definitionTache.LogonAuteur}");
         Console.WriteLine($"  |                  LogonAuto        : {logonAuto ?? "(aucun)"}");
         Console.WriteLine($"  |                  Agrégat          : commande #{instance.AggregateId}");

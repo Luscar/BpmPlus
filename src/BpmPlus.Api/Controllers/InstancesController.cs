@@ -192,7 +192,7 @@ public class InstancesController : ControllerBase
     {
         try
         {
-            await _bpm.AssignerLogonAsync(id, req.Logon, ct);
+            await _bpm.AssignerTacheAsync(id, req.Logon, ct);
             return NoContent();
         }
         catch (Exception ex)
