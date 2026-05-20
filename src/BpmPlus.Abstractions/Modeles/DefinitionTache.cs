@@ -16,9 +16,6 @@ public class DefinitionTache
     /// <summary>Nom du nœud interactif dans la définition du processus. Renseigné automatiquement par le moteur.</summary>
     public string? NomNoeud { get; set; }
 
-    /// <summary>Indique que la tâche est une révision d'une tâche existante.</summary>
-    public bool IndTacheRevision { get; set; }
-
     /// <summary>Logon de l'auteur ou du créateur de l'élément soumis à la tâche.</summary>
     public string? LogonAuteur { get; set; }
 

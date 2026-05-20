@@ -315,7 +315,6 @@ public class MaGestionTache : IGestionTache
             NomNoeud         = definitionTache.NomNoeud,        // renseigné automatiquement
             CodeRole         = definitionTache.CodeRole,
             CodeTache        = definitionTache.CodeTache,
-            IndTacheRevision = definitionTache.IndTacheRevision,
             LogonAuteur      = definitionTache.LogonAuteur,
             AggregateId      = instance.AggregateId
         }, ct);
@@ -489,7 +488,6 @@ Toutes les propriétés de la tâche sont configurées directement sur le builde
     .Role("RESPONSABLE_ACHAT")         // code de rôle requis
     .AssignerA("chef@corp.com")        // assignation automatique à l'arrivée (logon statique)
     .TypeTache("APPROBATION")          // code de type dans le système externe
-    .EstUneRevision()                  // marque la tâche comme révision
     .LogonAuteur("demandeur@corp.com") // auteur de l'élément soumis
 
     // Commande exécutée à la suspension (avant que la tâche ne soit créée)
@@ -527,7 +525,6 @@ Toutes les propriétés de la tâche sont configurées directement sur le builde
 | `.AssignerA(string)` | `DefinitionTache.SourceLogonAuto` | Logon statique assigné automatiquement à l'arrivée |
 | `.AssignerA(ISourceParametre)` | `DefinitionTache.SourceLogonAuto` | Logon dynamique (ex. `Src.Var("nomVar")`) résolu à l'exécution |
 | `.TypeTache(string)` | `DefinitionTache.CodeTache` | Code type dans le système externe |
-| `.EstUneRevision()` | `DefinitionTache.IndTacheRevision` | Marque la tâche comme révision |
 | `.LogonAuteur(string)` | `DefinitionTache.LogonAuteur` | Logon de l'auteur de l'élément soumis |
 
 > **`NomNoeud` automatique :** le moteur renseigne `DefinitionTache.NomNoeud` à partir du nom du nœud. Il n'est pas nécessaire de le spécifier.
@@ -776,7 +773,6 @@ var definition = ProcessusV2
             .Titre("Valider la demande (montant élevé)")
             .Description("Cette demande dépasse 50 000 € et nécessite votre approbation.")
             .Role("DIRECTEUR")
-            .EstUneRevision()
             .AuRetour("EnregistrerDecisionDirecteurCommand")
             .Puis("decision-responsable")))
 
@@ -1383,7 +1379,6 @@ public void DefinitionApprobation_EstValide()
 | `.AssignerA("logon")` | `SourceLogonAuto` | Logon statique assigné automatiquement à l'arrivée |
 | `.AssignerA(Src.Var("var"))` | `SourceLogonAuto` | Logon résolu depuis une variable du processus à l'exécution |
 | `.TypeTache("CODE")` | `CodeTache` | Code type dans le système externe |
-| `.EstUneRevision()` | `IndTacheRevision` | Marque comme révision |
 | `.LogonAuteur("logon")` | `LogonAuteur` | Auteur de l'élément soumis |
 
 **Commandes et flux :**
@@ -1495,7 +1490,6 @@ Ce tableau liste la correspondance entre chaque méthode V1 (`ProcessusBuilder`)
 | `n.LogonAuto("logon")` | `n.AssignerA("logon")` (ou `n.AssignerA(Src.Var("var"))` pour un logon dynamique) |
 | `n.CodeRole("CODE")` | `n.Role("CODE")` |
 | `n.CodeTache("CODE")` | `n.TypeTache("CODE")` |
-| `n.TacheRevision()` | `n.EstUneRevision()` |
 | `n.LogonAuteur("logon")` | `n.LogonAuteur("logon")` |
 | `n.CommandePre("Nom?", c => …)` | `n.AuDemarrage("Nom?", c => …)` |
 | `n.CommandePost("Nom?", c => …)` | `n.AuRetour("Nom?", c => …)` |

@@ -287,7 +287,6 @@ DefinitionTache       : DefinitionTache             // Métadonnées transmises 
   ├ CodeRole          : string?                     // Code du rôle requis (ex. "RESPONSABLE", "VALIDATEUR")
   ├ CodeTache         : string?                     // Code identifiant le type de tâche dans le système externe
   ├ NomNoeud          : string?                     // Renseigné automatiquement par le moteur (nom ou id du nœud)
-  ├ IndTacheRevision  : bool                        // true si la tâche est une révision d'un élément existant
   └ LogonAuteur       : string?                     // Logon de l'auteur de l'élément soumis à la tâche
 CommandePre           : DefinitionCommande?         // Commande optionnelle avant suspension
 CommandePost          : DefinitionCommande?         // Commande optionnelle à la complétion

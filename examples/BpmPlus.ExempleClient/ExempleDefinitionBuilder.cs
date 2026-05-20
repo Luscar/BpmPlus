@@ -11,7 +11,7 @@ namespace BpmPlus.ExempleClient;
 //
 //    • Phase grouping            — organises nodes by logical stage
 //    • Fluent condition DSL      — SiVariable("x").EstEgalA("y").Aller("n")
-//    • Flat task DSL             — .Titre(…).Role(…).TypeTache(…).EstUneRevision()
+//    • Flat task DSL             — .Titre(…).Role(…).TypeTache(…)
 //    • PatternApprobation helper — wires an interactive + decision in one call
 //    • EcheanceQuery on waits    — deadline resolved by a runtime query
 //    • BuildStrict()             — validates dead-ends and orphan nodes
@@ -124,7 +124,6 @@ public static class ExempleDefinitionBuilder
                     .Titre("Valider la demande d'achat (montant élevé)")
                     .Description("Cette demande dépasse 50 000 € et nécessite votre approbation.")
                     .Role("DIRECTEUR")
-                    .EstUneRevision()
                     .AuRetour("EnregistrerDecisionDirecteurCommand")
                     .Puis("decision-directeur"))
 
