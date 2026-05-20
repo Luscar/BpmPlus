@@ -356,6 +356,17 @@ public class ServiceBpm : IServiceBpm
         if (await EstSuspenduTacheInteractiveAsync(idInstance, ct))
             await _gestionTache.AssignerTacheAsync(idInstance, logon, ct);
 
+        if (instance.IdNoeudCourant is not null)
+        {
+            var definition = await ChargerDefinitionInstanceAsync(instance, ct);
+            var noeud = definition.Noeuds
+                .OfType<NoeudInteractif>()
+                .FirstOrDefault(n => n.Id == instance.IdNoeudCourant);
+
+            if (noeud?.DefinitionTache.SourceLogonAuto is SourceVariable sourceVar)
+                await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
+        }
+
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
             IdInstance = idInstance,

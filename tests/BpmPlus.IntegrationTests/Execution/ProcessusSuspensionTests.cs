@@ -100,6 +100,29 @@ public class ProcessusSuspensionTests : IDisposable
     }
 
     [Fact]
+    public async Task AssignerLogon_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
+    {
+        var def = DefinitionBuilder.Definir("p-logon-var")
+            .Intitule("Logon depuis variable")
+            .Commence("tache")
+            .Interactif("tache", b => b
+                .Titre("Valider")
+                .AssignerA(Src.Var("responsable"))
+                .Vers("fin"))
+            .Metier("fin", b => b.Commande("NoOpCommand"))
+            .Build();
+        await _fixture.PublierDefinitionAsync(def);
+
+        var idInstance = await _fixture.ServiceBpm.DemarrerAsync("p-logon-var", 20L,
+            new Dictionary<string, object?> { ["responsable"] = "ancien.logon" });
+
+        await _fixture.ServiceBpm.AssignerLogonAsync(idInstance, "nouveau.logon");
+
+        var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);
+        variables["responsable"].Should().Be("nouveau.logon");
+    }
+
+    [Fact]
     public async Task ModifierVariable_InstanceSuspendue_VariableModifiee()
     {
         var cle = await PublierProcessusInteractifAsync("p-susp-5");
