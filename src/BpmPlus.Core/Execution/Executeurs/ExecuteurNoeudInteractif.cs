@@ -47,7 +47,7 @@ public class ExecuteurNoeudInteractif
             if (noeud.DefinitionTache.SourceLogonAuto is not null)
             {
                 logon = (await _resolveur.ResolveAsync(noeud.DefinitionTache.SourceLogonAuto, contexte, ct))?.ToString();
-                if (logon is not null)
+                if (!string.IsNullOrWhiteSpace(logon))
                 {
                     await _gestionTache.AssignerTacheAsync(instance.Id, logon, ct);
                     _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
