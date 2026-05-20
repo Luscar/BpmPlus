@@ -472,7 +472,8 @@ public sealed class InteractifV2Builder
     public InteractifV2Builder Titre(string titre)                { _tache.Titre            = titre;       return this; }
     public InteractifV2Builder Description(string description)    { _tache.Description      = description; return this; }
     public InteractifV2Builder Role(string codeRole)              { _tache.CodeRole         = codeRole;    return this; }
-    public InteractifV2Builder AssignerA(string logon)            { _tache.LogonAuto        = logon;       return this; }
+    public InteractifV2Builder AssignerA(string logon)            { _tache.SourceLogonAuto  = new SourceValeurStatique(logon); return this; }
+    public InteractifV2Builder AssignerA(ISourceParametre source) { _tache.SourceLogonAuto  = source;      return this; }
     public InteractifV2Builder TypeTache(string codeTache)        { _tache.CodeTache        = codeTache;   return this; }
     public InteractifV2Builder EstUneRevision(bool valeur = true) { _tache.IndTacheRevision = valeur;      return this; }
     public InteractifV2Builder LogonAuteur(string logon)          { _tache.LogonAuteur      = logon;       return this; }
