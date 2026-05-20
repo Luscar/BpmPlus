@@ -107,6 +107,11 @@ public interface IServiceBpm
         string logon,
         CancellationToken ct = default);
 
+    Task SynchroniserLogonAsync(
+        long idInstance,
+        string logon,
+        CancellationToken ct = default);
+
     // ── Historique ────────────────────────────────────────────────────────────
 
     Task<IReadOnlyList<EvenementInstance>> ObtenirHistoriqueAsync(

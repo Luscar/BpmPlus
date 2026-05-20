@@ -123,6 +123,44 @@ public class ProcessusSuspensionTests : IDisposable
     }
 
     [Fact]
+    public async Task SynchroniserLogon_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
+    {
+        var def = DefinitionBuilder.Definir("p-sync-logon")
+            .Intitule("Sync logon externe")
+            .Commence("tache")
+            .Interactif("tache", b => b
+                .Titre("Valider")
+                .AssignerA(Src.Var("responsable"))
+                .Vers("fin"))
+            .Metier("fin", b => b.Commande("NoOpCommand"))
+            .Build();
+        await _fixture.PublierDefinitionAsync(def);
+
+        var idInstance = await _fixture.ServiceBpm.DemarrerAsync("p-sync-logon", 30L,
+            new Dictionary<string, object?> { ["responsable"] = "ancien.logon" });
+
+        await _fixture.ServiceBpm.SynchroniserLogonAsync(idInstance, "externe.logon");
+
+        var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);
+        variables["responsable"].Should().Be("externe.logon");
+    }
+
+    [Fact]
+    public async Task SynchroniserLogon_NoeudSansSourceLogonVariable_NeFaitRien()
+    {
+        var cle = await PublierProcessusInteractifAsync("p-sync-noop");
+
+        var idInstance = await _fixture.ServiceBpm.DemarrerAsync(cle, 31L,
+            new Dictionary<string, object?> { ["autreVar"] = "inchangee" });
+
+        var act = async () => await _fixture.ServiceBpm.SynchroniserLogonAsync(idInstance, "logon");
+        await act.Should().NotThrowAsync();
+
+        var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);
+        variables["autreVar"].Should().Be("inchangee");
+    }
+
+    [Fact]
     public async Task ModifierVariable_InstanceSuspendue_VariableModifiee()
     {
         var cle = await PublierProcessusInteractifAsync("p-susp-5");
