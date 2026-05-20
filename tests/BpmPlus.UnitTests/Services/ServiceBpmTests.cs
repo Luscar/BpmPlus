@@ -32,7 +32,7 @@ public class ServiceBpmTests
         var resolveur = new ResolveurParametre(scope, NullLogger<ResolveurParametre>.Instance);
         var executeurMetier = new ExecuteurNoeudMetier(scope, resolveur, NullLogger<ExecuteurNoeudMetier>.Instance);
         var executeurInteractif = new ExecuteurNoeudInteractif(
-            executeurMetier, _gestionTacheMock.Object, NullLogger<ExecuteurNoeudInteractif>.Instance);
+            executeurMetier, _gestionTacheMock.Object, resolveur, NullLogger<ExecuteurNoeudInteractif>.Instance);
         var executeurDecision = new ExecuteurNoeudDecision(resolveur, NullLogger<ExecuteurNoeudDecision>.Instance);
         var executeurAttenteTemps = new ExecuteurNoeudAttenteTemps(
             resolveur, NullLogger<ExecuteurNoeudAttenteTemps>.Instance);
