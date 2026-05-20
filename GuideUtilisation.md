@@ -352,7 +352,6 @@ Le `ProcessusV2Builder` est le point d'entrée recommandé pour créer des défi
 - **Métadonnées enrichies** sur le processus (description, auteur, étiquettes)
 - **Groupement par phases** pour structurer visuellement les définitions complexes
 - **DSL de conditions fluides** pour les nœuds décision
-- **Sous-builder de tâche** regroupant toutes les propriétés en un seul bloc
 - **Patron d'approbation** prêt à l'emploi
 - **Validation stricte** et **export Mermaid** intégrés
 
@@ -410,7 +409,8 @@ var definition = ProcessusV2
             .SiVariable("complet").EstEgalA(true).Aller("instruction")
             .Sinon.Aller("demande-complementaire"))
         .Interactif("instruction", "Instruction du dossier", n => n
-            .TacheHumaine(t => t.Titre("Instruire le dossier").Role("INSTRUCTEUR"))
+            .Titre("Instruire le dossier")
+            .Role("INSTRUCTEUR")
             .AuRetour("EnregistrerDecisionInstructionCommand")
             .Puis("cloturer-dossier"))
         .Metier("demande-complementaire", "Demander des pièces complémentaires"))
@@ -478,21 +478,19 @@ Un nœud métier exécute un `IBpmHandlerCommande`. Le nom de commande est dédu
 
 Un nœud interactif **suspend** l'instance, crée une tâche via `IGestionTache`, puis reprend l'exécution quand `TerminerEtapeAsync` est appelé.
 
-#### Sous-builder `TacheHumaine` — forme recommandée
+#### Forme standard
+
+Toutes les propriétés de la tâche sont configurées directement sur le builder du nœud :
 
 ```csharp
 .Interactif("approbation-responsable", "Approbation responsable", n => n
-
-    // Toutes les propriétés de la tâche dans un seul bloc
-    .TacheHumaine(t => t
-        .Titre("Approuver la commande")
-        .Description("Vérifiez les justificatifs avant de valider ou refuser.")
-        .Role("RESPONSABLE_ACHAT")         // code de rôle requis
-        .AssignerA("chef@corp.com")        // assignation automatique à l'arrivée
-        .TypeTache("APPROBATION")          // code de type dans le système externe
-        .EstUneRevision()                  // marque la tâche comme révision
-        .LogonAuteur("demandeur@corp.com") // auteur de l'élément soumis
-    )
+    .Titre("Approuver la commande")
+    .Description("Vérifiez les justificatifs avant de valider ou refuser.")
+    .Role("RESPONSABLE_ACHAT")         // code de rôle requis
+    .AssignerA("chef@corp.com")        // assignation automatique à l'arrivée (logon statique)
+    .TypeTache("APPROBATION")          // code de type dans le système externe
+    .EstUneRevision()                  // marque la tâche comme révision
+    .LogonAuteur("demandeur@corp.com") // auteur de l'élément soumis
 
     // Commande exécutée à la suspension (avant que la tâche ne soit créée)
     .AuDemarrage("PreparerContexteApprobationCommand", c => c
@@ -506,26 +504,28 @@ Un nœud interactif **suspend** l'instance, crée une tâche via `IGestionTache`
     .Puis("decision-approbation"))
 ```
 
-#### Raccourcis pour les cas simples
+#### Assignation depuis une variable du processus
+
+`.AssignerA()` accepte également un `ISourceParametre`, ce qui permet de résoudre le logon à l'exécution depuis une variable du processus :
 
 ```csharp
-// Titre seul — sans sous-builder
-.Interactif("validation-simple", n => n
-    .Tache("Valider le dossier", "Vérifier les pièces justificatives")
+.Interactif("validation-responsable", "Validation", n => n
+    .Titre("Valider le dossier")
     .Role("VALIDATEUR")
-    .AssignerA("responsable@corp.com")
+    .AssignerA(Src.Var("responsableLogon"))  // résolu au moment de l'arrivée sur le nœud
     .AuRetour("EnregistrerValidationCommand")
     .Puis("archiver"))
 ```
 
-**Récapitulatif des méthodes de `TacheHumaine` :**
+**Récapitulatif des méthodes de configuration de la tâche :**
 
 | Méthode | Propriété modifiée | Description |
 |---------|-------------------|-------------|
 | `.Titre(string)` | `DefinitionTache.Titre` | Intitulé affiché à l'assigné |
 | `.Description(string)` | `DefinitionTache.Description` | Instructions détaillées |
 | `.Role(string)` | `DefinitionTache.CodeRole` | Code de rôle requis (ex. `"RESPONSABLE"`) |
-| `.AssignerA(string)` | `DefinitionTache.LogonAuto` | Logon assigné automatiquement à l'arrivée |
+| `.AssignerA(string)` | `DefinitionTache.SourceLogonAuto` | Logon statique assigné automatiquement à l'arrivée |
+| `.AssignerA(ISourceParametre)` | `DefinitionTache.SourceLogonAuto` | Logon dynamique (ex. `Src.Var("nomVar")`) résolu à l'exécution |
 | `.TypeTache(string)` | `DefinitionTache.CodeTache` | Code type dans le système externe |
 | `.EstUneRevision()` | `DefinitionTache.IndTacheRevision` | Marque la tâche comme révision |
 | `.LogonAuteur(string)` | `DefinitionTache.LogonAuteur` | Logon de l'auteur de l'élément soumis |
@@ -581,6 +581,18 @@ Un nœud décision évalue ses flux sortants **dans l'ordre de déclaration**. L
 ```
 
 > **`.Aller(id)` et `.Vers(id)`** sont deux alias identiques. Utilisez celui qui rend votre code le plus lisible.
+
+#### Terminer le processus depuis une branche décision
+
+Pour mettre fin au processus directement sur une branche (sans nœud terminal séparé), utilisez `.Terminer()` à la place de `.Aller()` :
+
+```csharp
+.Decision("controle-eligibilite", "Client éligible ?", d => d
+    .SiVariable("eligible").EstEgalA(false).Terminer()   // fin immédiate sur cette branche
+    .Sinon.Aller("traiter-demande"))
+```
+
+Le processus est terminé proprement (statut `Terminee`) sans qu'un nœud `EstFinale` ne soit nécessaire.
 
 ---
 
@@ -663,7 +675,7 @@ Cela équivaut exactement à :
 
 ```csharp
 .Interactif("approbation-responsable", "Approbation responsable", n => n
-    .TacheHumaine(t => t.Titre("Approbation responsable"))
+    .Titre("Approbation responsable")
     .AuRetour("EnregistrerDecisionCommand")
     .Puis("decision-approbation"))
 
@@ -750,10 +762,9 @@ var definition = ProcessusV2
     .Phase("Approbation", phase => phase
 
         .Interactif("approbation-responsable", "Approbation du responsable", n => n
-            .TacheHumaine(t => t
-                .Titre("Valider la demande d'achat")
-                .Description("Vérifiez les justificatifs et les devis avant de valider.")
-                .Role("RESPONSABLE_ACHAT"))
+            .Titre("Valider la demande d'achat")
+            .Description("Vérifiez les justificatifs et les devis avant de valider.")
+            .Role("RESPONSABLE_ACHAT")
             .AuRetour("EnregistrerDecisionResponsableCommand")
             .Puis("decision-responsable"))
 
@@ -762,11 +773,10 @@ var definition = ProcessusV2
             .Sinon.Aller("notifier-refus"))
 
         .Interactif("approbation-directeur", "Approbation du directeur", n => n
-            .TacheHumaine(t => t
-                .Titre("Valider la demande (montant élevé)")
-                .Description("Cette demande dépasse 50 000 € et nécessite votre approbation.")
-                .Role("DIRECTEUR")
-                .EstUneRevision())
+            .Titre("Valider la demande (montant élevé)")
+            .Description("Cette demande dépasse 50 000 € et nécessite votre approbation.")
+            .Role("DIRECTEUR")
+            .EstUneRevision()
             .AuRetour("EnregistrerDecisionDirecteurCommand")
             .Puis("decision-responsable")))
 
@@ -971,19 +981,31 @@ await _serviceBpm.TerminerEtapeAsync(idInstance);
 
 ### Affectation automatique (`.AssignerA`)
 
-Un nœud interactif peut être pré-assigné à un logon **dès la conception** :
+Un nœud interactif peut être assigné automatiquement à l'arrivée, soit avec un logon statique, soit depuis une variable du processus résolue à l'exécution.
+
+**Logon statique (connu à la conception) :**
 
 ```csharp
 .Interactif("validation-responsable", n => n
-    .TacheHumaine(t => t
-        .Titre("Valider le dossier")
-        .AssignerA("chef.service@corp.com")   // assignation automatique à l'arrivée
-        .Role("RESPONSABLE"))
+    .Titre("Valider le dossier")
+    .Role("RESPONSABLE")
+    .AssignerA("chef.service@corp.com")   // assignation automatique à l'arrivée
     .AuRetour("EnregistrerValidationCommand")
     .Puis("archivage"))
 ```
 
-À l'arrivée sur ce nœud, le moteur appelle automatiquement `IGestionTache.AssignerTacheAsync` et enregistre un événement `TacheAssignee` dans l'historique.
+**Logon depuis une variable du processus (résolu à l'exécution) :**
+
+```csharp
+.Interactif("validation-responsable", n => n
+    .Titre("Valider le dossier")
+    .Role("RESPONSABLE")
+    .AssignerA(Src.Var("responsableLogon"))  // variable définie au démarrage ou par un handler précédent
+    .AuRetour("EnregistrerValidationCommand")
+    .Puis("archivage"))
+```
+
+Dans les deux cas, le moteur appelle automatiquement `IGestionTache.AssignerTacheAsync` et enregistre un événement `TacheAssignee` dans l'historique.
 
 ### Affectation manuelle (dynamique)
 
@@ -1351,28 +1373,27 @@ public void DefinitionApprobation_EstValide()
 
 ### `NoeudInteractif` — méthodes du builder
 
-| Méthode | Description |
-|---------|-------------|
-| `.TacheHumaine(t => t…)` | Configure la tâche via le sous-builder `TacheV2Builder` |
-| `.Tache("titre", "desc?")` | Raccourci : définit uniquement le titre (et description optionnelle) |
-| `.Role("CODE")` | Code de rôle requis (inline, sans `TacheHumaine`) |
-| `.AssignerA("logon")` | Logon assigné automatiquement à l'arrivée (inline) |
-| `.AuDemarrage("NomCmd?", c => …)` | Commande exécutée à la suspension |
-| `.AuRetour("NomCmd?", c => …)` | Commande exécutée à la reprise (`TerminerEtapeAsync`) |
-| `.Puis("id")` / `.Vers("id")` | Nœud suivant |
-| `.Final()` | Marque le nœud comme terminal |
-
-**Sous-builder `TacheHumaine` (`TacheV2Builder`) :**
+**Configuration de la tâche :**
 
 | Méthode | Propriété | Description |
 |---------|-----------|-------------|
 | `.Titre("texte")` | `Titre` | Intitulé de la tâche |
 | `.Description("texte")` | `Description` | Instructions pour l'assigné |
-| `.Role("CODE")` | `CodeRole` | Rôle requis |
-| `.AssignerA("logon")` | `LogonAuto` | Assignation auto |
+| `.Role("CODE")` | `CodeRole` | Code de rôle requis |
+| `.AssignerA("logon")` | `SourceLogonAuto` | Logon statique assigné automatiquement à l'arrivée |
+| `.AssignerA(Src.Var("var"))` | `SourceLogonAuto` | Logon résolu depuis une variable du processus à l'exécution |
 | `.TypeTache("CODE")` | `CodeTache` | Code type dans le système externe |
 | `.EstUneRevision()` | `IndTacheRevision` | Marque comme révision |
 | `.LogonAuteur("logon")` | `LogonAuteur` | Auteur de l'élément soumis |
+
+**Commandes et flux :**
+
+| Méthode | Description |
+|---------|-------------|
+| `.AuDemarrage("NomCmd?", c => …)` | Commande exécutée à la suspension |
+| `.AuRetour("NomCmd?", c => …)` | Commande exécutée à la reprise (`TerminerEtapeAsync`) |
+| `.Puis("id")` / `.Vers("id")` | Nœud suivant |
+| `.Final()` | Marque le nœud comme terminal |
 
 ---
 
@@ -1384,6 +1405,7 @@ public void DefinitionApprobation_EstValide()
 | `.SiQuery("NomQuery?", q => …).Aller("id")` | Condition query (retourne `bool`) |
 | `.Sinon.Aller("id")` | Branche par défaut (aucune condition) |
 | `.Aller("id")` / `.Vers("id")` | Cible d'un flux (après condition) |
+| `.Terminer()` | Termine le processus sur cette branche, sans nœud terminal séparé |
 
 **Opérateurs `SiVariable` :**
 
@@ -1469,12 +1491,12 @@ Ce tableau liste la correspondance entre chaque méthode V1 (`ProcessusBuilder`)
 | V1 | V2 |
 |----|-----|
 | `.Interactif("id", "nom", n => n…)` | `.Interactif("id", "nom", n => n…)` |
-| `n.Tache("titre", "desc?")` | `n.Tache("titre", "desc?")` ou `n.TacheHumaine(t => t…)` |
-| `n.LogonAuto("logon")` | `n.AssignerA("logon")` ou `t.AssignerA("logon")` dans `TacheHumaine` |
-| `n.CodeRole("CODE")` | `n.Role("CODE")` ou `t.Role("CODE")` dans `TacheHumaine` |
-| `n.CodeTache("CODE")` | `t.TypeTache("CODE")` dans `TacheHumaine` |
-| `n.TacheRevision()` | `t.EstUneRevision()` dans `TacheHumaine` |
-| `n.LogonAuteur("logon")` | `t.LogonAuteur("logon")` dans `TacheHumaine` |
+| `n.Tache("titre", "desc?")` | `n.Titre("titre").Description("desc?")` |
+| `n.LogonAuto("logon")` | `n.AssignerA("logon")` (ou `n.AssignerA(Src.Var("var"))` pour un logon dynamique) |
+| `n.CodeRole("CODE")` | `n.Role("CODE")` |
+| `n.CodeTache("CODE")` | `n.TypeTache("CODE")` |
+| `n.TacheRevision()` | `n.EstUneRevision()` |
+| `n.LogonAuteur("logon")` | `n.LogonAuteur("logon")` |
 | `n.CommandePre("Nom?", c => …)` | `n.AuDemarrage("Nom?", c => …)` |
 | `n.CommandePost("Nom?", c => …)` | `n.AuRetour("Nom?", c => …)` |
 | `n.Vers("id")` | `n.Puis("id")` ou `n.Vers("id")` |
