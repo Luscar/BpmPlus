@@ -93,7 +93,7 @@ public class ProcessusSuspensionTests : IDisposable
 
         var idInstance = await _fixture.ServiceBpm.DemarrerAsync(cle, 5L, null);
 
-        await _fixture.ServiceBpm.AssignerLogonAsync(idInstance, "jean.dupont");
+        await _fixture.ServiceBpm.AssignerTacheAsync(idInstance, "jean.dupont");
 
         var logon = await _fixture.ServiceBpm.ObtenirLogonTacheActiveAsync(idInstance);
         logon.Should().Be("jean.dupont");
@@ -116,14 +116,14 @@ public class ProcessusSuspensionTests : IDisposable
         var idInstance = await _fixture.ServiceBpm.DemarrerAsync("p-logon-var", 20L,
             new Dictionary<string, object?> { ["responsable"] = "ancien.logon" });
 
-        await _fixture.ServiceBpm.AssignerLogonAsync(idInstance, "nouveau.logon");
+        await _fixture.ServiceBpm.AssignerTacheAsync(idInstance, "nouveau.logon");
 
         var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);
         variables["responsable"].Should().Be("nouveau.logon");
     }
 
     [Fact]
-    public async Task SynchroniserLogon_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
+    public async Task AssignerLogon_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
     {
         var def = DefinitionBuilder.Definir("p-sync-logon")
             .Intitule("Sync logon externe")
@@ -139,21 +139,21 @@ public class ProcessusSuspensionTests : IDisposable
         var idInstance = await _fixture.ServiceBpm.DemarrerAsync("p-sync-logon", 30L,
             new Dictionary<string, object?> { ["responsable"] = "ancien.logon" });
 
-        await _fixture.ServiceBpm.SynchroniserLogonAsync(idInstance, "externe.logon");
+        await _fixture.ServiceBpm.AssignerLogonAsync(idInstance, "externe.logon");
 
         var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);
         variables["responsable"].Should().Be("externe.logon");
     }
 
     [Fact]
-    public async Task SynchroniserLogon_NoeudSansSourceLogonVariable_NeFaitRien()
+    public async Task AssignerLogon_NoeudSansSourceLogonVariable_NeFaitRien()
     {
         var cle = await PublierProcessusInteractifAsync("p-sync-noop");
 
         var idInstance = await _fixture.ServiceBpm.DemarrerAsync(cle, 31L,
             new Dictionary<string, object?> { ["autreVar"] = "inchangee" });
 
-        var act = async () => await _fixture.ServiceBpm.SynchroniserLogonAsync(idInstance, "logon");
+        var act = async () => await _fixture.ServiceBpm.AssignerLogonAsync(idInstance, "logon");
         await act.Should().NotThrowAsync();
 
         var variables = await _fixture.RepoVariable.ChargerToutesAsync(idInstance);

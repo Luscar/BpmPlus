@@ -349,7 +349,7 @@ public class ServiceBpm : IServiceBpm
         return null;
     }
 
-    public async Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default)
+    public async Task AssignerTacheAsync(long idInstance, string logon, CancellationToken ct = default)
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 
@@ -380,7 +380,7 @@ public class ServiceBpm : IServiceBpm
         _logger.LogInformation("Instance {IdInstance} — tâche assignée à '{Logon}'", idInstance, logon);
     }
 
-    public async Task SynchroniserLogonAsync(long idInstance, string logon, CancellationToken ct = default)
+    public async Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default)
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 

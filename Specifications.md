@@ -207,7 +207,7 @@ Historique des transitions et événements d’une instance.
 - `MigrationInstance` — migration vers une nouvelle version (détail : ancienne version, ancien nœud, nouveau nœud)
 - `SignalRecu` — signal reçu pour débloquer une attente
 - `VariableModifiee` — modification manuelle d’une variable via `IServiceBpm`
-- `TacheAssignee` — affectation manuelle d’un logon via `AssignerLogonAsync` (Detail = logon)
+- `TacheAssignee` — affectation via `AssignerTacheAsync` (BPM + système externe) ou `AssignerLogonAsync` (BPM uniquement) (Detail = logon)
 
 -----
 
@@ -826,6 +826,7 @@ public interface IServiceBpm
     /// Assigne un logon à la tâche active d'une instance suspendue.
     /// Appelle IGestionTache.AssignerTacheAsync et enregistre un événement TacheAssignee.
     /// </summary>
+    Task AssignerTacheAsync(long idInstance, string logon, CancellationToken ct = default);
     Task AssignerLogonAsync(long idInstance, string logon, CancellationToken ct = default);
 
     // ── Historique ────────────────────────────────────────────────────────────

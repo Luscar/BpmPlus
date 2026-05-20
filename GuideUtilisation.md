@@ -1009,7 +1009,7 @@ Pour affecter ou réaffecter un logon sur une instance suspendue :
 
 ```csharp
 // Assigne le logon et appelle IGestionTache.AssignerTacheAsync
-await _serviceBpm.AssignerLogonAsync(idInstance, "collaborateur@corp.com");
+await _serviceBpm.AssignerTacheAsync(idInstance, "collaborateur@corp.com");
 ```
 
 ### Consulter le logon actif
@@ -1131,7 +1131,7 @@ foreach (var ev in historique)
 | `FinProcessus`      | Instance terminée                                      |
 | `SignalRecu`        | Signal reçu pour débloquer une attente                 |
 | `VariableModifiee`  | Modification externe d'une variable                    |
-| `TacheAssignee`     | Affectation manuelle via `AssignerLogonAsync`          |
+| `TacheAssignee`     | Affectation via `AssignerTacheAsync` ou `AssignerLogonAsync` |
 | `MigrationInstance` | Migration vers une nouvelle version                    |
 
 ---
