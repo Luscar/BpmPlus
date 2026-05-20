@@ -35,7 +35,16 @@ public class ResolveurParametre
 
             case SourceValeurStatique svs:
                 _logger.LogDebug("Résolution SourceValeurStatique = {Valeur}", svs.Valeur);
-                return svs.Valeur is JsonElement je ? DenormaliserJsonElement(je) : svs.Valeur;
+                if (svs.Valeur is ISourceParametre srcImbriquee)
+                    return await ResolveAsync(srcImbriquee, contexte, ct);
+                if (svs.Valeur is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Object &&
+                        TryDeserialiserSourceParametre(je, out var srcJson) && srcJson is not null)
+                        return await ResolveAsync(srcJson, contexte, ct);
+                    return DenormaliserJsonElement(je);
+                }
+                return svs.Valeur;
 
             case SourceQuery sq:
                 return await ResolveSourceQueryAsync(sq, contexte, ct);
@@ -174,4 +183,18 @@ public class ResolveurParametre
         JsonValueKind.Null => null,
         _ => element.GetRawText()
     };
+
+    private static bool TryDeserialiserSourceParametre(JsonElement element, out ISourceParametre? result)
+    {
+        try
+        {
+            result = element.Deserialize<ISourceParametre>();
+            return result is not null;
+        }
+        catch
+        {
+            result = null;
+            return false;
+        }
+    }
 }
