@@ -41,18 +41,16 @@ public class ExecuteurNoeudInteractif
         string? logon = null;
         if (_gestionTache is not null)
         {
-            await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, ct);
-            _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée pour instance {IdInstance}", noeud.Id, instance.Id);
-
             if (noeud.DefinitionTache.SourceLogonAuto is not null)
             {
                 logon = (await _resolveur.ResolveAsync(noeud.DefinitionTache.SourceLogonAuto, contexte, ct))?.ToString();
-                if (!string.IsNullOrWhiteSpace(logon))
-                {
-                    await _gestionTache.AssignerTacheAsync(instance.Id, logon, ct);
-                    _logger.LogInformation("NoeudInteractif '{Id}' — tâche assignée auto : {Logon}", noeud.Id, logon);
-                }
+                if (string.IsNullOrWhiteSpace(logon))
+                    logon = null;
             }
+
+            await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, logon, ct);
+            _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée pour instance {IdInstance}{LogonAuto}",
+                noeud.Id, instance.Id, logon is not null ? $", assignée auto : {logon}" : string.Empty);
         }
 
         var detail = System.Text.Json.JsonSerializer.Serialize(new

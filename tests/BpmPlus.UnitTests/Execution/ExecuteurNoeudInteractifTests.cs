@@ -61,7 +61,7 @@ public class ExecuteurNoeudInteractifTests
     {
         var gestionMock = new Mock<IGestionTache>();
         gestionMock.Setup(g => g.CreerTacheAsync(
-            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
@@ -79,19 +79,16 @@ public class ExecuteurNoeudInteractifTests
         await executeur.EntrerAsync(noeud, InstanceTest(), ContexteVide(), CancellationToken.None);
 
         gestionMock.Verify(g => g.CreerTacheAsync(
-            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()),
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task Entrer_AvecLogonAuto_AppelleAssignerTache()
+    public async Task Entrer_AvecLogonAuto_AppelleCreerTacheAvecLogon()
     {
         var gestionMock = new Mock<IGestionTache>();
         gestionMock.Setup(g => g.CreerTacheAsync(
-            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        gestionMock.Setup(g => g.AssignerTacheAsync(
-            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
@@ -108,8 +105,11 @@ public class ExecuteurNoeudInteractifTests
 
         await executeur.EntrerAsync(noeud, InstanceTest(5), ContexteVide(5), CancellationToken.None);
 
-        gestionMock.Verify(g => g.AssignerTacheAsync(5L, "john.doe", It.IsAny<CancellationToken>()),
+        gestionMock.Verify(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), "john.doe", It.IsAny<CancellationToken>()),
             Times.Once);
+        gestionMock.Verify(g => g.AssignerTacheAsync(
+            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class ExecuteurNoeudInteractifTests
     {
         var gestionMock = new Mock<IGestionTache>();
         gestionMock.Setup(g => g.CreerTacheAsync(
-            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
@@ -215,19 +215,17 @@ public class ExecuteurNoeudInteractifTests
 
         await executeur.EntrerAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
 
-        gestionMock.Verify(g => g.AssignerTacheAsync(
-            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        gestionMock.Verify(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), null, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Entrer_AvecLogonDepuisVariable_AssigneLeLogonResolue()
+    public async Task Entrer_AvecLogonDepuisVariable_AppelleCreerTacheAvecLogonResolu()
     {
         var gestionMock = new Mock<IGestionTache>();
         gestionMock.Setup(g => g.CreerTacheAsync(
-            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        gestionMock.Setup(g => g.AssignerTacheAsync(
-            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var scope = new ContainerBuilder().Build().BeginLifetimeScope();
@@ -248,7 +246,10 @@ public class ExecuteurNoeudInteractifTests
 
         await executeur.EntrerAsync(noeud, InstanceTest(7), contexte, CancellationToken.None);
 
-        gestionMock.Verify(g => g.AssignerTacheAsync(7L, "marie.dupont", It.IsAny<CancellationToken>()),
+        gestionMock.Verify(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), "marie.dupont", It.IsAny<CancellationToken>()),
             Times.Once);
+        gestionMock.Verify(g => g.AssignerTacheAsync(
+            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
