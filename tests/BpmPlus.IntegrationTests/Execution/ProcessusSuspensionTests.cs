@@ -123,7 +123,7 @@ public class ProcessusSuspensionTests : IDisposable
     }
 
     [Fact]
-    public async Task AssignerLogon_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
+    public async Task AssignerLogonAsync_NoeudAvecSourceLogonVariable_MetAJourLaVariable()
     {
         var def = DefinitionBuilder.Definir("p-sync-logon")
             .Intitule("Sync logon externe")
