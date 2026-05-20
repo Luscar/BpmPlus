@@ -186,6 +186,39 @@ public class ExecuteurNoeudInteractifTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Entrer_AvecVariableLogonVideOuNull_NAssignePas(object? valeurVariable)
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-vide",
+            DefinitionTache = new DefinitionTache { Titre = "Tâche", SourceLogonAuto = new SourceVariable("responsable") },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var contexte = new ContexteExecution(1, "test", 1, null,
+            new AccesseurVariables(new Dictionary<string, object?> { ["responsable"] = valeurVariable }),
+            CancellationToken.None);
+
+        await executeur.EntrerAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
+
+        gestionMock.Verify(g => g.AssignerTacheAsync(
+            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Entrer_AvecLogonDepuisVariable_AssigneLeLogonResolue()
     {
