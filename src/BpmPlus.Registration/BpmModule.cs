@@ -215,6 +215,7 @@ internal class GestionTacheNulle : IGestionTache
 {
     public Task CreerTacheAsync(
         DefinitionTache definitionTache, InstanceProcessus instance,
+        string? logonAuto = null,
         CancellationToken ct = default)
         => Task.CompletedTask;
 

@@ -14,6 +14,7 @@ public interface IGestionTache
     Task CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
+        string? logonAuto = null,
         CancellationToken ct = default);
 
     /// <summary>

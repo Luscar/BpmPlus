@@ -12,6 +12,7 @@ public class GestionTache : IGestionTache
     public Task CreerTacheAsync(
         DefinitionTache definitionTache,
         InstanceProcessus instance,
+        string? logonAuto = null,
         CancellationToken ct = default)
     {
         Console.WriteLine($"  |   [GestionTache] Tâche créée — processus #{instance.Id}");
@@ -22,6 +23,7 @@ public class GestionTache : IGestionTache
         Console.WriteLine($"  |                  CodeTache        : {definitionTache.CodeTache}");
         Console.WriteLine($"  |                  IndTacheRevision : {definitionTache.IndTacheRevision}");
         Console.WriteLine($"  |                  LogonAuteur      : {definitionTache.LogonAuteur}");
+        Console.WriteLine($"  |                  LogonAuto        : {logonAuto ?? "(aucun)"}");
         Console.WriteLine($"  |                  Agrégat          : commande #{instance.AggregateId}");
 
         return Task.CompletedTask;
