@@ -46,6 +46,10 @@ public class BpmModule : Autofac.Module
             .AsSelf()
             .InstancePerLifetimeScope();
 
+        builder.RegisterType<ExecuteurNoeudQuery>()
+            .AsSelf()
+            .InstancePerLifetimeScope();
+
         builder.RegisterType<ExecuteurNoeudInteractif>()
             .AsSelf()
             .InstancePerLifetimeScope();

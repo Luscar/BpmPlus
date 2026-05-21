@@ -15,6 +15,7 @@ public record ResultatExecution(TypeResultatExecution Type, string? IdDernierNoe
 public class MoteurExecution
 {
     private readonly ExecuteurNoeudMetier _executeurMetier;
+    private readonly ExecuteurNoeudQuery _executeurQuery;
     private readonly ExecuteurNoeudInteractif _executeurInteractif;
     private readonly ExecuteurNoeudDecision _executeurDecision;
     private readonly ExecuteurNoeudAttenteTemps _executeurAttenteTemps;
@@ -27,6 +28,7 @@ public class MoteurExecution
 
     public MoteurExecution(
         ExecuteurNoeudMetier executeurMetier,
+        ExecuteurNoeudQuery executeurQuery,
         ExecuteurNoeudInteractif executeurInteractif,
         ExecuteurNoeudDecision executeurDecision,
         ExecuteurNoeudAttenteTemps executeurAttenteTemps,
@@ -38,6 +40,7 @@ public class MoteurExecution
         ILogger<MoteurExecution> logger)
     {
         _executeurMetier = executeurMetier;
+        _executeurQuery = executeurQuery;
         _executeurInteractif = executeurInteractif;
         _executeurDecision = executeurDecision;
         _executeurAttenteTemps = executeurAttenteTemps;
@@ -157,6 +160,7 @@ public class MoteurExecution
         return noeud switch
         {
             NoeudMetier nm => await _executeurMetier.ExecuterAsync(nm, contexte, ct),
+            NoeudQuery nq => await _executeurQuery.ExecuterAsync(nq, contexte, ct),
             NoeudInteractif ni => await _executeurInteractif.EntrerAsync(ni, instance, contexte, ct),
             NoeudDecision nd => await _executeurDecision.ExecuterAsync(nd, contexte, ct),
             NoeudAttenteTemps nat => await _executeurAttenteTemps.EntrerAsync(nat, contexte, ct),

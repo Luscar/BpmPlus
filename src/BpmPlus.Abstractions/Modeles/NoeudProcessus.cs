@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 namespace BpmPlus.Abstractions;
 
 [JsonDerivedType(typeof(NoeudMetier), "NoeudMetier")]
+[JsonDerivedType(typeof(NoeudQuery), "NoeudQuery")]
 [JsonDerivedType(typeof(NoeudInteractif), "NoeudInteractif")]
 [JsonDerivedType(typeof(NoeudDecision), "NoeudDecision")]
 [JsonDerivedType(typeof(NoeudAttenteTemps), "NoeudAttenteTemps")]
@@ -31,6 +32,18 @@ public class NoeudMetier : NoeudProcessus
 
     [JsonPropertyName("parametres")]
     public Dictionary<string, ISourceParametre> Parametres { get; set; } = new();
+}
+
+public class NoeudQuery : NoeudProcessus
+{
+    [JsonPropertyName("nomQuery")]
+    public string NomQuery { get; set; } = string.Empty;
+
+    [JsonPropertyName("parametres")]
+    public Dictionary<string, ISourceParametre> Parametres { get; set; } = new();
+
+    [JsonPropertyName("nomVariableResultat")]
+    public string NomVariableResultat { get; set; } = string.Empty;
 }
 
 public class NoeudInteractif : NoeudProcessus
