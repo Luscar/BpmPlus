@@ -15,5 +15,5 @@ public class InstanceProcessus
     public DateTime DateMaj { get; set; }
     public string? LogonAssigne { get; set; }
     public string? LogonTachePrecedente { get; set; }
-    public string? IdTacheExterne { get; set; }
+    public long? IdTacheExterne { get; set; }
 }

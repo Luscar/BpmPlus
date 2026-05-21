@@ -225,6 +225,6 @@ internal class GestionTacheNulle : IGestionTache
         CancellationToken ct = default)
         => Task.CompletedTask;
 
-    public Task AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
-        => Task.CompletedTask;
+    public Task<long?> AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
+        => Task.FromResult<long?>(null);
 }

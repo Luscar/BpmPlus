@@ -16,7 +16,7 @@ public interface IRepositoryInstance
     Task<IReadOnlyList<InstanceProcessus>> ObtenirParStatutAsync(StatutInstance statut, CancellationToken ct = default);
     Task MettreAJourStatutAsync(long id, StatutInstance statut, string? idNoeudCourant, DateTime? dateFin, CancellationToken ct = default);
     Task MettreAJourVersionAsync(long id, int nouvelleVersion, string? idNoeudCourant, CancellationToken ct = default);
-    Task MettreAJourLogonsAsync(long id, string? logonAssigne, string? logonTachePrecedente, string? idTacheExterne, CancellationToken ct = default);
+    Task MettreAJourLogonsAsync(long id, string? logonAssigne, string? logonTachePrecedente, long? idTacheExterne, CancellationToken ct = default);
     Task<bool> ExisteProcessusActifAsync(string cleDefinition, long aggregateId, CancellationToken ct = default);
     Task CreerTablesAsync(IDbConnection connection);
 }

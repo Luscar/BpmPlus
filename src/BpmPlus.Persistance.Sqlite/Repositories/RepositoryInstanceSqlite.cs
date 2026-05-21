@@ -27,7 +27,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 DATE_MAJ            TEXT    NOT NULL,
                 LOGON_ASSIGNE       TEXT    NULL,
                 LOGON_TACHE_PREC    TEXT    NULL,
-                ID_TACHE_EXTERNE    TEXT    NULL
+                ID_TACHE_EXTERNE    INTEGER NULL
             );
             CREATE INDEX IF NOT EXISTS IDX_{Prefixe}_INST_AGGID
                 ON {T("INSTANCE_PROCESSUS")}(AGGREGATE_ID);
@@ -225,7 +225,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
     }
 
     public async Task MettreAJourLogonsAsync(
-        long id, string? logonAssigne, string? logonTachePrecedente, string? idTacheExterne, CancellationToken ct = default)
+        long id, string? logonAssigne, string? logonTachePrecedente, long? idTacheExterne, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync($"""
             UPDATE {T("INSTANCE_PROCESSUS")}

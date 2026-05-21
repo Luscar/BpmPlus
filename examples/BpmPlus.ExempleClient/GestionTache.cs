@@ -40,9 +40,9 @@ public class GestionTache : IGestionTache
         return Task.CompletedTask;
     }
 
-    public Task AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
+    public Task<long?> AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default)
     {
         Console.WriteLine($"  |   [GestionTache] Tâche assignée — processus #{idProcessus} → {assignee}");
-        return Task.CompletedTask;
+        return Task.FromResult<long?>(null);
     }
 }

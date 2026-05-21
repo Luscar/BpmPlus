@@ -30,7 +30,8 @@ public interface IGestionTache
 
     /// <summary>
     /// Assigne la tâche à un utilisateur ou groupe.
+    /// Retourne l'identifiant de la tâche dans le système externe, ou null si non applicable.
     /// </summary>
     /// <param name="idProcessus">Identifiant de l'instance de processus, utilisé comme clé de la tâche.</param>
-    Task AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default);
+    Task<long?> AssignerTacheAsync(long idProcessus, string assignee, CancellationToken ct = default);
 }

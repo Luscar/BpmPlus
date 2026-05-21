@@ -105,7 +105,6 @@ public interface IServiceBpm
     Task AssignerTacheAsync(
         long idInstance,
         string logon,
-        string? idTacheExterne = null,
         CancellationToken ct = default);
 
     Task AssignerLogonAsync(

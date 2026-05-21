@@ -158,12 +158,12 @@ public class RepositoryInstanceTests : IDisposable
     {
         var id = await _fixture.RepoInstance.CreerAsync(NouvelleInstance("proc-logon", 100));
 
-        await _fixture.RepoInstance.MettreAJourLogonsAsync(id, "alice", null, "EXT-42");
+        await _fixture.RepoInstance.MettreAJourLogonsAsync(id, "alice", null, 42L);
 
         var apresAssignation = await _fixture.RepoInstance.ObtenirParIdAsync(id);
         apresAssignation!.LogonAssigne.Should().Be("alice");
         apresAssignation.LogonTachePrecedente.Should().BeNull();
-        apresAssignation.IdTacheExterne.Should().Be("EXT-42");
+        apresAssignation.IdTacheExterne.Should().Be(42L);
 
         await _fixture.RepoInstance.MettreAJourLogonsAsync(id, null, "alice", null);
 
