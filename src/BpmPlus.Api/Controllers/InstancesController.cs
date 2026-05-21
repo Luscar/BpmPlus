@@ -192,7 +192,7 @@ public class InstancesController : ControllerBase
     {
         try
         {
-            await _bpm.AssignerTacheAsync(id, req.Logon, ct);
+            await _bpm.AssignerTacheAsync(id, req.Logon, req.IdTacheExterne, ct);
             return NoContent();
         }
         catch (Exception ex)
@@ -244,7 +244,7 @@ public record DemarrerInstanceRequest(
     Dictionary<string, object?>? Variables);
 
 public record EnvoyerSignalRequest(string NomSignal);
-public record AssignerRequest(string Logon);
+public record AssignerRequest(string Logon, string? IdTacheExterne = null);
 public record ModifierVariableRequest(object? Valeur);
 public record MigrerInstanceRequest(
     int VersionCible,

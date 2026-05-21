@@ -26,7 +26,8 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 DATE_CREATION       TEXT    NOT NULL,
                 DATE_MAJ            TEXT    NOT NULL,
                 LOGON_ASSIGNE       TEXT    NULL,
-                LOGON_TACHE_PREC    TEXT    NULL
+                LOGON_TACHE_PREC    TEXT    NULL,
+                ID_TACHE_EXTERNE    TEXT    NULL
             );
             CREATE INDEX IF NOT EXISTS IDX_{Prefixe}_INST_AGGID
                 ON {T("INSTANCE_PROCESSUS")}(AGGREGATE_ID);
@@ -224,13 +225,14 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
     }
 
     public async Task MettreAJourLogonsAsync(
-        long id, string? logonAssigne, string? logonTachePrecedente, CancellationToken ct = default)
+        long id, string? logonAssigne, string? logonTachePrecedente, string? idTacheExterne, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync($"""
             UPDATE {T("INSTANCE_PROCESSUS")}
-            SET LOGON_ASSIGNE    = @LogonAssigne,
-                LOGON_TACHE_PREC = @LogonTachePrecedente,
-                DATE_MAJ         = @DateMaj
+            SET LOGON_ASSIGNE     = @LogonAssigne,
+                LOGON_TACHE_PREC  = @LogonTachePrecedente,
+                ID_TACHE_EXTERNE  = @IdTacheExterne,
+                DATE_MAJ          = @DateMaj
             WHERE ID = @Id
             """,
             new
@@ -238,6 +240,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 Id = id,
                 LogonAssigne = logonAssigne,
                 LogonTachePrecedente = logonTachePrecedente,
+                IdTacheExterne = idTacheExterne,
                 DateMaj = DateTime.UtcNow.ToString("O")
             },
             Tx);
@@ -269,6 +272,7 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
         DateCreation = DateTime.Parse((string)row.DATE_CREATION),
         DateMaj = DateTime.Parse((string)row.DATE_MAJ),
         LogonAssigne = row.LOGON_ASSIGNE,
-        LogonTachePrecedente = row.LOGON_TACHE_PREC
+        LogonTachePrecedente = row.LOGON_TACHE_PREC,
+        IdTacheExterne = row.ID_TACHE_EXTERNE
     };
 }
