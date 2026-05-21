@@ -153,5 +153,23 @@ public class RepositoryInstanceTests : IDisposable
         resultats.Should().Contain(i => i.Id == idInstance);
     }
 
+    [Fact]
+    public async Task MettreAJourLogons_StockeEtRecupereLogons()
+    {
+        var id = await _fixture.RepoInstance.CreerAsync(NouvelleInstance("proc-logon", 100));
+
+        await _fixture.RepoInstance.MettreAJourLogonsAsync(id, "alice", null);
+
+        var apresAssignation = await _fixture.RepoInstance.ObtenirParIdAsync(id);
+        apresAssignation!.LogonAssigne.Should().Be("alice");
+        apresAssignation.LogonTachePrecedente.Should().BeNull();
+
+        await _fixture.RepoInstance.MettreAJourLogonsAsync(id, null, "alice");
+
+        var apresCompletion = await _fixture.RepoInstance.ObtenirParIdAsync(id);
+        apresCompletion!.LogonAssigne.Should().BeNull();
+        apresCompletion.LogonTachePrecedente.Should().Be("alice");
+    }
+
     public void Dispose() => _fixture.Dispose();
 }

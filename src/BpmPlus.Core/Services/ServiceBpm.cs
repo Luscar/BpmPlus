@@ -174,6 +174,9 @@ public class ServiceBpm : IServiceBpm
             idInstance, instance.CleDefinition, instance.VersionDefinition,
             instance.AggregateId, accesseur, ct);
 
+        if (instance.LogonAssigne is not null)
+            await _repoInstance.MettreAJourLogonsAsync(idInstance, null, instance.LogonAssigne, ct);
+
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
             IdInstance = idInstance,
@@ -366,6 +369,8 @@ public class ServiceBpm : IServiceBpm
             if (noeud?.DefinitionTache.SourceLogonAuto is SourceVariable sourceVar)
                 await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
         }
+
+        await _repoInstance.MettreAJourLogonsAsync(idInstance, logon, instance.LogonTachePrecedente, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {

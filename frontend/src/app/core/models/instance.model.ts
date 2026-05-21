@@ -27,6 +27,8 @@ export interface InstanceProcessus {
   dateFin?: string;
   dateCreation: string;
   dateMaj: string;
+  logonAssigne?: string;
+  logonTachePrecedente?: string;
 }
 
 export interface EvenementInstance {
