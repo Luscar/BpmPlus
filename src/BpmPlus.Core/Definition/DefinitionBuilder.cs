@@ -474,8 +474,10 @@ public sealed class InteractifV2Builder
     public InteractifV2Builder Role(string codeRole)              { _tache.CodeRole         = codeRole;    return this; }
     public InteractifV2Builder AssignerA(string logon)            { _tache.SourceLogonAuto  = new SourceValeurStatique(logon); return this; }
     public InteractifV2Builder AssignerA(ISourceParametre source) { _tache.SourceLogonAuto  = source;      return this; }
-    public InteractifV2Builder TypeTache(string codeTache)        { _tache.CodeTache        = codeTache;   return this; }
-    public InteractifV2Builder LogonAuteur(string logon)          { _tache.LogonAuteur      = logon;       return this; }
+    public InteractifV2Builder TypeTache(string codeTache)                       { _tache.CodeTache                      = codeTache;   return this; }
+    public InteractifV2Builder LogonAuteur(string logon)                         { _tache.LogonAuteur                    = logon;       return this; }
+    public InteractifV2Builder StockerLogonAssigneDans(string nomVariable)       { _tache.NomVariableLogonAssigne        = nomVariable; return this; }
+    public InteractifV2Builder StockerLogonTachePrecedenteDans(string nomVariable) { _tache.NomVariableLogonTachePrecedente = nomVariable; return this; }
 
     // ── Commands ──────────────────────────────────────────────────────────────
 

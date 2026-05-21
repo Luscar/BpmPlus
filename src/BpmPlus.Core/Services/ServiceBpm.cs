@@ -365,6 +365,9 @@ public class ServiceBpm : IServiceBpm
 
             if (noeud?.DefinitionTache.SourceLogonAuto is SourceVariable sourceVar)
                 await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
+
+            if (noeud?.DefinitionTache.NomVariableLogonAssigne is { } nomVarAssigne)
+                await _repoVariable.MettreAJourAsync(idInstance, nomVarAssigne, logon, ct);
         }
 
         await _repoEvenement.AjouterAsync(new EvenementInstance

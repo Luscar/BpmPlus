@@ -51,6 +51,9 @@ public class ExecuteurNoeudInteractif
             await _gestionTache.CreerTacheAsync(noeud.DefinitionTache, instance, logon, ct);
             _logger.LogInformation("NoeudInteractif '{Id}' — tâche créée pour instance {IdInstance}{LogonAuto}",
                 noeud.Id, instance.Id, logon is not null ? $", assignée auto : {logon}" : string.Empty);
+
+            if (logon is not null && noeud.DefinitionTache.NomVariableLogonAssigne is { } nomVarAssigne)
+                contexte.Variables.Definir(nomVarAssigne, logon);
         }
 
         var detail = System.Text.Json.JsonSerializer.Serialize(new
@@ -76,6 +79,14 @@ public class ExecuteurNoeudInteractif
             _logger.LogInformation("NoeudInteractif '{Id}' — exécution CommandePost '{Cmd}'",
                 noeud.Id, noeud.CommandePost.NomCommande);
             await _executeurCommande.ExecuterDefinitionCommandeAsync(noeud.CommandePost, contexte, ct);
+        }
+
+        if (noeud.DefinitionTache.NomVariableLogonTachePrecedente is { } nomVarPrec)
+        {
+            var logonAssigne = noeud.DefinitionTache.NomVariableLogonAssigne is { } nomVarAssigne
+                ? contexte.Variables.ObtenirOuDefaut<string?>(nomVarAssigne)
+                : null;
+            contexte.Variables.Definir(nomVarPrec, logonAssigne);
         }
 
         if (_gestionTache is not null)

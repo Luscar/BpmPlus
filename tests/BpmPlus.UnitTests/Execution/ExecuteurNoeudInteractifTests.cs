@@ -252,4 +252,137 @@ public class ExecuteurNoeudInteractifTests
         gestionMock.Verify(g => g.AssignerTacheAsync(
             It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Entrer_AvecLogonAutoEtNomVariableLogonAssigne_StockeDansVariable()
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-stock",
+            DefinitionTache = new DefinitionTache
+            {
+                Titre = "Tâche stockage",
+                SourceLogonAuto = new SourceValeurStatique("alice.martin"),
+                NomVariableLogonAssigne = "logonAssigne"
+            },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var variables = new Dictionary<string, object?>();
+        var accesseur = new AccesseurVariables(variables);
+        var contexte = new ContexteExecution(1, "test", 1, null, accesseur, CancellationToken.None);
+
+        await executeur.EntrerAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
+
+        accesseur.ObtenirOuDefaut<string?>("logonAssigne").Should().Be("alice.martin");
+    }
+
+    [Fact]
+    public async Task Entrer_SansLogonAuto_NomVariableLogonAssigneNonAlimented()
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.CreerTacheAsync(
+            It.IsAny<DefinitionTache>(), It.IsAny<InstanceProcessus>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-sans-auto",
+            DefinitionTache = new DefinitionTache
+            {
+                Titre = "Sans auto",
+                NomVariableLogonAssigne = "logonAssigne"
+            },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var variables = new Dictionary<string, object?>();
+        var accesseur = new AccesseurVariables(variables);
+        var contexte = new ContexteExecution(1, "test", 1, null, accesseur, CancellationToken.None);
+
+        await executeur.EntrerAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
+
+        accesseur.Existe("logonAssigne").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Completer_AvecNomVariableLogonTachePrecedente_StockeDansVariable()
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.FermerTacheAsync(
+            It.IsAny<InstanceProcessus>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-prec",
+            DefinitionTache = new DefinitionTache
+            {
+                Titre = "Tâche précédente",
+                NomVariableLogonAssigne = "logonAssigne",
+                NomVariableLogonTachePrecedente = "logonTachePrecedente"
+            },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var variables = new Dictionary<string, object?> { ["logonAssigne"] = "bob.lefort" };
+        var accesseur = new AccesseurVariables(variables);
+        var contexte = new ContexteExecution(1, "test", 1, null, accesseur, CancellationToken.None);
+
+        await executeur.CompleterAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
+
+        accesseur.ObtenirOuDefaut<string?>("logonTachePrecedente").Should().Be("bob.lefort");
+    }
+
+    [Fact]
+    public async Task Completer_SansNomVariableLogonAssigne_LogonTachePrecedenteEstNull()
+    {
+        var gestionMock = new Mock<IGestionTache>();
+        gestionMock.Setup(g => g.FermerTacheAsync(
+            It.IsAny<InstanceProcessus>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scope = new ContainerBuilder().Build().BeginLifetimeScope();
+        var executeur = new ExecuteurNoeudInteractif(
+            BuildExecuteurMetier(scope), gestionMock.Object,
+            BuildResolveur(scope), NullLogger<ExecuteurNoeudInteractif>.Instance);
+
+        var noeud = new NoeudInteractif
+        {
+            Id = "tache-prec-null",
+            DefinitionTache = new DefinitionTache
+            {
+                Titre = "Tâche sans logonAssigne",
+                NomVariableLogonTachePrecedente = "logonTachePrecedente"
+            },
+            FluxSortants = new List<FluxSortant> { new() { Vers = "fin" } }
+        };
+
+        var accesseur = new AccesseurVariables(new Dictionary<string, object?>());
+        var contexte = new ContexteExecution(1, "test", 1, null, accesseur, CancellationToken.None);
+
+        await executeur.CompleterAsync(noeud, InstanceTest(), contexte, CancellationToken.None);
+
+        accesseur.ObtenirOuDefaut<string?>("logonTachePrecedente").Should().BeNull();
+    }
 }
