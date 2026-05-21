@@ -13,4 +13,6 @@ public class InstanceProcessus
     public DateTime? DateFin { get; set; }
     public DateTime DateCreation { get; set; }
     public DateTime DateMaj { get; set; }
+    public string? LogonAssigne { get; set; }
+    public string? LogonTachePrecedente { get; set; }
 }

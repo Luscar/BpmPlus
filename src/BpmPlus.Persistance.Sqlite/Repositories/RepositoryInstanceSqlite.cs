@@ -24,7 +24,9 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
                 DATE_DEBUT          TEXT    NOT NULL,
                 DATE_FIN            TEXT    NULL,
                 DATE_CREATION       TEXT    NOT NULL,
-                DATE_MAJ            TEXT    NOT NULL
+                DATE_MAJ            TEXT    NOT NULL,
+                LOGON_ASSIGNE       TEXT    NULL,
+                LOGON_TACHE_PREC    TEXT    NULL
             );
             CREATE INDEX IF NOT EXISTS IDX_{Prefixe}_INST_AGGID
                 ON {T("INSTANCE_PROCESSUS")}(AGGREGATE_ID);
@@ -221,6 +223,26 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
             Tx);
     }
 
+    public async Task MettreAJourLogonsAsync(
+        long id, string? logonAssigne, string? logonTachePrecedente, CancellationToken ct = default)
+    {
+        await Cn.ExecuteAsync($"""
+            UPDATE {T("INSTANCE_PROCESSUS")}
+            SET LOGON_ASSIGNE    = @LogonAssigne,
+                LOGON_TACHE_PREC = @LogonTachePrecedente,
+                DATE_MAJ         = @DateMaj
+            WHERE ID = @Id
+            """,
+            new
+            {
+                Id = id,
+                LogonAssigne = logonAssigne,
+                LogonTachePrecedente = logonTachePrecedente,
+                DateMaj = DateTime.UtcNow.ToString("O")
+            },
+            Tx);
+    }
+
     public async Task<bool> ExisteProcessusActifAsync(
         string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
@@ -245,6 +267,8 @@ public class RepositoryInstanceSqlite : SqliteRepositoryBase, IRepositoryInstanc
         DateDebut = DateTime.Parse((string)row.DATE_DEBUT),
         DateFin = row.DATE_FIN is not null ? DateTime.Parse((string)row.DATE_FIN) : null,
         DateCreation = DateTime.Parse((string)row.DATE_CREATION),
-        DateMaj = DateTime.Parse((string)row.DATE_MAJ)
+        DateMaj = DateTime.Parse((string)row.DATE_MAJ),
+        LogonAssigne = row.LOGON_ASSIGNE,
+        LogonTachePrecedente = row.LOGON_TACHE_PREC
     };
 }

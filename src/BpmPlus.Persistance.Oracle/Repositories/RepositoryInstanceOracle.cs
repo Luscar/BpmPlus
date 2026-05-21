@@ -194,6 +194,20 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
             Tx);
     }
 
+    public async Task MettreAJourLogonsAsync(
+        long id, string? logonAssigne, string? logonTachePrecedente, CancellationToken ct = default)
+    {
+        await Cn.ExecuteAsync(OraParam($"""
+            UPDATE {T("INSTC_PROCS")}
+            SET LOGON_ASSIG  = :LogonAssigne,
+                LOGON_TACH_PREC = :LogonTachePrecedente,
+                DH_MODIF     = :DateMaj
+            WHERE NO_SEQ_INSTC_PROCS = :Id
+            """),
+            new { Id = id, LogonAssigne = logonAssigne, LogonTachePrecedente = logonTachePrecedente, DateMaj = DateTime.UtcNow },
+            Tx);
+    }
+
     public async Task<bool> ExisteProcessusActifAsync(
         string cleDefinition, long aggregateId, CancellationToken ct = default)
     {
@@ -219,6 +233,8 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         DateDebut = Convert.ToDateTime(row.DH_DEB),
         DateFin = row.DH_FIN is not null ? Convert.ToDateTime(row.DH_FIN) : null,
         DateCreation = Convert.ToDateTime(row.DH_CREA),
-        DateMaj = Convert.ToDateTime(row.DH_MODIF)
+        DateMaj = Convert.ToDateTime(row.DH_MODIF),
+        LogonAssigne = row.LOGON_ASSIG,
+        LogonTachePrecedente = row.LOGON_TACH_PREC
     };
 }
