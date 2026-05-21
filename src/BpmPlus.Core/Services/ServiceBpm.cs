@@ -352,12 +352,13 @@ public class ServiceBpm : IServiceBpm
         return null;
     }
 
-    public async Task AssignerTacheAsync(long idInstance, string logon, string? idTacheExterne = null, CancellationToken ct = default)
+    public async Task AssignerTacheAsync(long idInstance, string logon, CancellationToken ct = default)
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 
+        long? idTacheExterne = null;
         if (await EstSuspenduTacheInteractiveAsync(idInstance, ct))
-            await _gestionTache.AssignerTacheAsync(idInstance, logon, ct);
+            idTacheExterne = await _gestionTache.AssignerTacheAsync(idInstance, logon, ct);
 
         if (instance.IdNoeudCourant is not null)
         {

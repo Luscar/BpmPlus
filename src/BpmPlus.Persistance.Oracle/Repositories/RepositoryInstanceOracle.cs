@@ -195,7 +195,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     }
 
     public async Task MettreAJourLogonsAsync(
-        long id, string? logonAssigne, string? logonTachePrecedente, string? idTacheExterne, CancellationToken ct = default)
+        long id, string? logonAssigne, string? logonTachePrecedente, long? idTacheExterne, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
             UPDATE {T("INSTC_PROCS")}
@@ -237,6 +237,6 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         DateMaj = Convert.ToDateTime(row.DH_MODIF),
         LogonAssigne = row.LOGON_ASSIG,
         LogonTachePrecedente = row.LOGON_TACH_PREC,
-        IdTacheExterne = row.ID_TACH_EXTE
+        IdTacheExterne = row.ID_TACH_EXTE is not null ? Convert.ToInt64(row.ID_TACH_EXTE) : (long?)null
     };
 }
