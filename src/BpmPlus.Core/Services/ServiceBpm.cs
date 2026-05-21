@@ -174,8 +174,8 @@ public class ServiceBpm : IServiceBpm
             idInstance, instance.CleDefinition, instance.VersionDefinition,
             instance.AggregateId, accesseur, ct);
 
-        if (instance.LogonAssigne is not null)
-            await _repoInstance.MettreAJourLogonsAsync(idInstance, null, instance.LogonAssigne, ct);
+        if (instance.LogonAssigne is not null || instance.IdTacheExterne is not null)
+            await _repoInstance.MettreAJourLogonsAsync(idInstance, null, instance.LogonAssigne, null, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {
@@ -352,7 +352,7 @@ public class ServiceBpm : IServiceBpm
         return null;
     }
 
-    public async Task AssignerTacheAsync(long idInstance, string logon, CancellationToken ct = default)
+    public async Task AssignerTacheAsync(long idInstance, string logon, string? idTacheExterne = null, CancellationToken ct = default)
     {
         var instance = await ObtenirInstanceValideAsync(idInstance, StatutInstance.Suspendue, ct);
 
@@ -370,7 +370,7 @@ public class ServiceBpm : IServiceBpm
                 await _repoVariable.MettreAJourAsync(idInstance, sourceVar.NomVariable, logon, ct);
         }
 
-        await _repoInstance.MettreAJourLogonsAsync(idInstance, logon, instance.LogonTachePrecedente, ct);
+        await _repoInstance.MettreAJourLogonsAsync(idInstance, logon, instance.LogonTachePrecedente, idTacheExterne, ct);
 
         await _repoEvenement.AjouterAsync(new EvenementInstance
         {

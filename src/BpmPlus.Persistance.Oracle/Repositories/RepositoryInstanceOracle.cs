@@ -195,16 +195,17 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
     }
 
     public async Task MettreAJourLogonsAsync(
-        long id, string? logonAssigne, string? logonTachePrecedente, CancellationToken ct = default)
+        long id, string? logonAssigne, string? logonTachePrecedente, string? idTacheExterne, CancellationToken ct = default)
     {
         await Cn.ExecuteAsync(OraParam($"""
             UPDATE {T("INSTC_PROCS")}
-            SET LOGON_ASSIG  = :LogonAssigne,
+            SET LOGON_ASSIG     = :LogonAssigne,
                 LOGON_TACH_PREC = :LogonTachePrecedente,
-                DH_MODIF     = :DateMaj
+                ID_TACH_EXTE    = :IdTacheExterne,
+                DH_MODIF        = :DateMaj
             WHERE NO_SEQ_INSTC_PROCS = :Id
             """),
-            new { Id = id, LogonAssigne = logonAssigne, LogonTachePrecedente = logonTachePrecedente, DateMaj = DateTime.UtcNow },
+            new { Id = id, LogonAssigne = logonAssigne, LogonTachePrecedente = logonTachePrecedente, IdTacheExterne = idTacheExterne, DateMaj = DateTime.UtcNow },
             Tx);
     }
 
@@ -235,6 +236,7 @@ public class RepositoryInstanceOracle : OracleRepositoryBase, IRepositoryInstanc
         DateCreation = Convert.ToDateTime(row.DH_CREA),
         DateMaj = Convert.ToDateTime(row.DH_MODIF),
         LogonAssigne = row.LOGON_ASSIG,
-        LogonTachePrecedente = row.LOGON_TACH_PREC
+        LogonTachePrecedente = row.LOGON_TACH_PREC,
+        IdTacheExterne = row.ID_TACH_EXTE
     };
 }
